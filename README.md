@@ -15,6 +15,11 @@ Some features:
 * Load OTs `.spr`, compile `.spr`
 * Load OTS `.dat`, compiling OTDat is WIP
 
+Image
+----
+
+<img width="1004" height="669" alt="obraz" src="https://github.com/user-attachments/assets/8acb6ed4-6221-4bca-b691-ee625dc56764" />
+
 Compiling in Windows
 ----
 
