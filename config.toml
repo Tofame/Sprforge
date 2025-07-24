@@ -1,0 +1,21 @@
+[GUI]
+spriteSize = 32
+itemButtonSize = 64
+spriteButtonSize = 64
+buttonsPerItemPage = 100
+buttonsPerSpritePage = 100
+gridColor = "#892ce6" # color of the grid drawn in e.g. item
+selectedThingColor = "#FF6347" # color of selected item/sprite
+
+[ITEMPROPERTIES]
+# Import of an item with e.g. width exceeding the below setting, will be forced.
+maxWidth = 6
+maxHeight = 6
+maxAnimationCount = 6
+
+[COMPILE]
+assetsFileName = "Tibia.spr" # Fallback name of compilled .assets to be called, if none provided in the popup
+itemsFileName = "Tibia.dat" # Fallback name of compiled .dat to be called, if none provided in the popup
+
+[PATHS]
+assetsPath = "data/things/"
