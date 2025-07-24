@@ -22,10 +22,10 @@ It is compillable in CLion.
 * You have to set working directory in run setup to be the folder Sprforge/ as this is where data/ and config.toml is.
 
 Uses CMake's fetch content to get most of the required libs.
-The libs you need to get on your own:
+The libs you need to get/update on your own:
 1. Nativefiledialog-extended
-* Download https://github.com/btzy/nativefiledialog-extended/releases/tag/v1.2.1
-* Add (just drag n drop) to the dependencies/nativefiledialog-extended
+* Download a release of [native-filedialog-extended](https://github.com/btzy/nativefiledialog-extended/releases) - I tested with .zip of v1.2.1 release.
+* Add it (just drag n drop) to the dependencies/nativefiledialog-extended
 
 Donate
 ----
