@@ -1059,7 +1059,7 @@ bool AssetsManager::isCompilable(bool needPath) {
 
 void AssetsManager::doPopupAssetsCompileAs() {
     ImGui::Text("Name:");
-    ImGui::InputText("##Name", &m_assetsInfo.name, m_assetsInfo.name.size());
+    ImGui::InputText("##Name", m_assetsInfo.name, sizeof(m_assetsInfo.name));
 
     ImGui::Spacing();
 

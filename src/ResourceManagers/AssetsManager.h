@@ -32,7 +32,7 @@ struct AssetsInfo {
     bool frameGroups = false;
 
     // Compiling stuff
-    std::string name = "Tibia"; // assets name without extension
+    char name[128] = "Tibia"; // assets name without extension
     int compileTypeIndex = 1;
     std::string outputPath;
 };
