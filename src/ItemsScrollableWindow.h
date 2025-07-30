@@ -125,24 +125,24 @@ public:
         selectItem(getPageFirstIndex());
     }
 
-    void exportItem(EXPORT_OPTIONS option) {
+    void exportItem(Tools::EXPORT_OPTIONS option) {
         if(!isAnyButtonSelected()) {
             return;
         }
-        std::string filePath = (std::filesystem::path(outputFolder) / (trim(itemName))).string() + getFormatString(option);
+        std::string filePath = (std::filesystem::path(outputFolder) / (Tools::trim(itemName))).string() + getFormatString(option);
 
         auto item = Items::getItemType(getSelectedButtonIndex());
 
         switch(option) {
-            case PNG:
-            case BMP:
-            case JPG:
+            case Tools::PNG:
+            case Tools::BMP:
+            case Tools::JPG:
                 assetsManager->exportTexture(filePath, assetsManager->getItemSpriteSheet(getSelectedButtonIndex(), item->animationsFrames));
                 break;
-            case TOML:
+            case Tools::TOML:
                 Items::exportItemToml(filePath, getSelectedButtonIndex());
                 break;
-            case ITF:
+            case Tools::ITF:
                 Items::exportItemItf(filePath, getSelectedButtonIndex());
                 break;
             default:
@@ -172,7 +172,7 @@ private:
     bool shouldOpenUnsavedPopup = false; // for "Save" changed itemType popup
 
     // Variables for export
-    std::string outputFolder = getDesktopPath();
+    std::string outputFolder = Tools::getDesktopPath();
     int exportFormatSelected = 0; // 0 = PNG, 1 = BMP, 2 = JPG, 3 = ITF, 4 = TOML
     std::string itemName = "item" + std::to_string(getSelectedButtonIndex());
 

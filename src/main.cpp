@@ -184,7 +184,7 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
 
     if(selectedCategory == CATEGORY_SPRITES && IsClipboardFormatAvailable(CF_BITMAP)) {
         auto pastedTexture = std::make_shared<sf::Texture>();
-        if (pasteTextureFromClipboard(pastedTexture)) {
+        if (Tools::pasteTextureFromClipboard(pastedTexture)) {
             auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
             if (pastedTexture->getSize().x != spriteMaxSize ||
                 pastedTexture->getSize().y != spriteMaxSize)
@@ -202,7 +202,7 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
         }
     } else if(selectedCategory == CATEGORY_ITEMS && IsClipboardFormatAvailable(RegisterClipboardFormat("ItemTypeBinary"))) {
         auto pastedItem = std::make_shared<ItemType>();
-        if (pasteItemTypeFromClipboard(*pastedItem)) {
+        if (Tools::pasteItemTypeFromClipboard(*pastedItem)) {
             // Logic to replace the item with the pasted one
             int index = itemsWindow->getSelectedButtonIndex();
             am->setUnsavedItemType(pastedItem, index);
@@ -217,8 +217,8 @@ void copyToClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindow, 
 
     if(selectedCategory == CATEGORY_SPRITES) {
         int index = spritesWindow->getSelectedSpriteIndex();
-        copyTextureToClipboard(*am->getTexture(index));
+        Tools::copyTextureToClipboard(*am->getTexture(index));
     } else if(selectedCategory == CATEGORY_ITEMS) {
-        copyItemTypeToClipboard(*Items::getItemType(itemsWindow->getSelectedButtonIndex()));
+        Tools::copyItemTypeToClipboard(*Items::getItemType(itemsWindow->getSelectedButtonIndex()));
     }
 }

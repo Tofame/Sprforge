@@ -276,7 +276,7 @@ void ItemsScrollableWindow::drawGUIItemTypeExport() {
         ImGui::InputText("##name", &itemName[0], itemName.size() + 1);
 
         ImGui::Text("Output Folder:");
-        if (!isValidFolderPath(outputFolder)) {
+        if (!Tools::isValidFolderPath(outputFolder)) {
             ImGui::SameLine();
             ImGui::Text("Invalid path!");
         }
@@ -284,7 +284,7 @@ void ItemsScrollableWindow::drawGUIItemTypeExport() {
         ImGui::InputText("##folder", &outputFolder[0], outputFolder.size() + 1);
         ImGui::SameLine();
         if (ImGui::Button("Browse")) {
-            auto selectedFolder = openFileDialogChooseFolder();
+            auto selectedFolder = Tools::openFileDialogChooseFolder();
             if (!selectedFolder.empty()) {
                 outputFolder = selectedFolder;
             }
@@ -306,10 +306,10 @@ void ItemsScrollableWindow::drawGUIItemTypeExport() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        auto colorsCount = pushImGuiGray(!isValidFolderPath(outputFolder));
+        auto colorsCount = Tools::pushImGuiGray(!Tools::isValidFolderPath(outputFolder));
         if (ImGui::Button("Confirm")) {
-            if (isValidFolderPath(outputFolder)) {
-                exportItem(static_cast<EXPORT_OPTIONS>(exportFormatSelected));
+            if (Tools::isValidFolderPath(outputFolder)) {
+                exportItem(static_cast<Tools::EXPORT_OPTIONS>(exportFormatSelected));
                 ImGui::CloseCurrentPopup();
             }
         }
@@ -317,8 +317,8 @@ void ItemsScrollableWindow::drawGUIItemTypeExport() {
 
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
-            if(!isValidFolderPath(outputFolder)) {
-                outputFolder = getDesktopPath();
+            if(!Tools::isValidFolderPath(outputFolder)) {
+                outputFolder = Tools::getDesktopPath();
             }
             ImGui::CloseCurrentPopup();
         }
@@ -328,7 +328,7 @@ void ItemsScrollableWindow::drawGUIItemTypeExport() {
 }
 
 void ItemsScrollableWindow::handleItemTypeImport() {
-    auto fileChosen = openFileDialog({"itf", "toml"});
+    auto fileChosen = Tools::openFileDialog({"itf", "toml"});
 
     if (fileChosen.empty()) {
         return; // User canceled the file selection
@@ -605,7 +605,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
     ImGui::SetCursorPosY(propertiesGroupSize.y - 60); // magic number
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60); // magic number
 
-    auto colorsCount = pushImGuiGray(!assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
+    auto colorsCount = Tools::pushImGuiGray(!assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
     if (ImGui::Button("Save Item")) {
         triggerItemSavePrompt();
     }

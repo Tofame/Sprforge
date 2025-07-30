@@ -1,6 +1,7 @@
 #include "Items.h"
 #include "../Misc/Warninger.h"
 #include "../Misc/definitions.h"
+#include "../Misc/tools.h"
 #include <toml++/toml.h>
 #include <iostream>
 #include <cstdint>
@@ -50,8 +51,9 @@ uint32_t Items::getItemIdByName(const std::string& name) {
         uint32_t i = 2; // skip 0 (undefined) and 1 (air/empty)
         while (i < itemTypes.size() && itemTypes[i] != nullptr) {
             const auto& iType = itemTypes[i];
-            if (!strcasecmp(name.c_str(), iType->name.c_str()))
+            if (Tools::iequals(name, iType->name)) {
                 return i;
+            }
             i++;
         }
     }

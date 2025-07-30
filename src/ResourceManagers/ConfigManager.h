@@ -24,8 +24,8 @@ public:
     [[nodiscard]] const ImVec2& getItemButtonSize() const { return BUTTONSIZE_ITEM; }
     [[nodiscard]] int getButtonsCountItemPage() const { return BUTTONS_ITEMPAGE; };
     [[nodiscard]] int getButtonsCountSpritePage() const { return BUTTONS_SPRITEPAGE; };
-    [[nodiscard]] ImU32 getImGuiGridColor() const { return ParseHexColor(GRID_COLOR); };
-    [[nodiscard]] ImU32 getImGuiSelectedThingColor() const { return ParseHexColor(SELECTED_THING_COLOR); };
+    [[nodiscard]] ImU32 getImGuiGridColor() const { return Tools::ParseHexColor(GRID_COLOR); };
+    [[nodiscard]] ImU32 getImGuiSelectedThingColor() const { return Tools::ParseHexColor(SELECTED_THING_COLOR); };
 
     [[nodiscard]] int getItemMaxWidth() const { return ITEM_MAXWIDTH; };
     [[nodiscard]] int getItemMaxHeight() const { return ITEM_MAXHEIGHT; };

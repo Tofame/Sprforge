@@ -790,7 +790,7 @@ void AssetsManager::drawAssetsManagerControls() {
     // Add the "Compile .spr" button
     ImGui::SameLine();
     auto compileAssetsIcon = getGuiHelper()->getImGuiTexture("icon_compileAssets");
-    auto colorsCount = pushImGuiGray(!isCompilable());
+    auto colorsCount = Tools::pushImGuiGray(!isCompilable());
     if(colorsCount > 0) {
         ImGui::BeginDisabled();
     }
@@ -811,7 +811,7 @@ void AssetsManager::drawAssetsManagerControls() {
         if(m_assetsInfo.outputPath.empty()) {
             m_assetsInfo.outputPath = SavedData::getInstance()->getDataString("tempLoadedGraphicFilePath").empty() ?
                 std::filesystem::current_path().string() + "/data/things/"
-                : cleanPathIntoFolderPath(SavedData::getInstance()->getDataString("tempLoadedGraphicFilePath"));
+                : Tools::cleanPathIntoFolderPath(SavedData::getInstance()->getDataString("tempLoadedGraphicFilePath"));
         }
         ImGui::OpenPopup("Compile Assets Files");
     }
@@ -846,7 +846,7 @@ void AssetsManager::buttonLoadGraphics(std::string& foundGraphicFilePath) {
     SavedData::getInstance()->setDataString("tempLoadedGraphicFilePath", foundGraphicFilePath);
 
     loadSpr(foundGraphicFilePath);
-    removeSuffix(foundGraphicFilePath, ".spr");
+    Tools::removeSuffix(foundGraphicFilePath, ".spr");
 
     loadOTDat(foundGraphicFilePath + ".dat");
     SavedData::getInstance()->setDataString("tempLoadedDatFilePath", foundGraphicFilePath + ".dat");
@@ -874,16 +874,16 @@ void AssetsManager::compile(const std::string& outputFilesPath) {
     std::string pathWeCompiledGraphicsTo;
     auto start = std::chrono::high_resolution_clock::now();
 
-    removeSuffix(compileAssetsTo, ".spr");
+    Tools::removeSuffix(compileAssetsTo, ".spr");
     pathWeCompiledGraphicsTo = compileAssetsTo + ".spr";
     compileSprFromTextures(pathWeCompiledGraphicsTo);
 
     auto end = std::chrono::high_resolution_clock::now(); // End time
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    fmt::print("Compiled graphics to: {}\nIt took: {}\n", pathWeCompiledGraphicsTo, formatDuration(duration));
+    fmt::print("Compiled graphics to: {}\nIt took: {}\n", pathWeCompiledGraphicsTo, Tools::formatDuration(duration));
 
     // Compile Dat
-    removeSuffix(compileDatTo, ".dat");
+    Tools::removeSuffix(compileDatTo, ".dat");
     compileOTDat(compileDatTo + ".dat");
     fmt::print("Compiled dat to: {}\n", compileDatTo + ".dat");
 
@@ -899,11 +899,11 @@ void AssetsManager::unload() {
 
 void AssetsManager::doPopupAssetFileOpen() {
     auto sprFolderPath = SavedData::getInstance()->getDataString("sprFolderPath");
-    bool foundOTDat = isPresentFileExtensionInAPath(sprFolderPath, ".dat");
-    bool foundOTAssetsInFolder = foundOTDat && isPresentFileExtensionInAPath(sprFolderPath, ".spr");
+    bool foundOTDat = Tools::isPresentFileExtensionInAPath(sprFolderPath, ".dat");
+    bool foundOTAssetsInFolder = foundOTDat && Tools::isPresentFileExtensionInAPath(sprFolderPath, ".spr");
 
     ImGui::Text("Spr Folder:");
-    if (!isValidFolderPath(sprFolderPath)) {
+    if (!Tools::isValidFolderPath(sprFolderPath)) {
         ImGui::SameLine();
         ImGui::Text("Invalid path!");
     } else if(!foundOTAssetsInFolder) {
@@ -917,7 +917,7 @@ void AssetsManager::doPopupAssetFileOpen() {
     };
     ImGui::SameLine();
     if (ImGui::Button("Browse##SelectPathToSprLoad")) {
-        auto selectedFolder = openFileDialogChooseFolder();
+        auto selectedFolder = Tools::openFileDialogChooseFolder();
         if (!selectedFolder.empty()) {
             SavedData::getInstance()->setDataString("sprFolderPath", selectedFolder);
         }
@@ -944,10 +944,10 @@ void AssetsManager::doPopupAssetFileOpen() {
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + bottomOffset);
 
     ImGui::SameLine();
-    auto colorsCount2 = pushImGuiGray(!isValidFolderPath(sprFolderPath) || !foundOTAssetsInFolder);
+    auto colorsCount2 = Tools::pushImGuiGray(!Tools::isValidFolderPath(sprFolderPath) || !foundOTAssetsInFolder);
     if (ImGui::Button("Load Spr")) {
-        if (isValidFolderPath(sprFolderPath) && foundOTAssetsInFolder) {
-            auto foundFile = findFile(sprFolderPath, ".spr");
+        if (Tools::isValidFolderPath(sprFolderPath) && foundOTAssetsInFolder) {
+            auto foundFile = Tools::findFile(sprFolderPath, ".spr");
             buttonLoadGraphics(foundFile);
             ImGui::CloseCurrentPopup();
         }
@@ -1067,7 +1067,7 @@ void AssetsManager::doPopupAssetsCompileAs() {
     ImGui::InputText("##OutputPath", &m_assetsInfo.outputPath, m_assetsInfo.outputPath.size());
     ImGui::SameLine();
     if (ImGui::Button("Browse")) {
-        auto selectedFolder = openFileDialogChooseFolder();
+        auto selectedFolder = Tools::openFileDialogChooseFolder();
         if (!selectedFolder.empty()) {
             m_assetsInfo.outputPath = selectedFolder;
         }

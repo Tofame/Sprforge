@@ -179,11 +179,11 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
         if (!dropManager->IsDraggingFiles() && !dropManager->GetDraggedFiles().empty())
         {
             const auto& files = dropManager->GetDraggedFiles();
-            const auto& allowedExtensions = getImageExtensions();
+            const auto& allowedExtensions = Tools::getImageExtensions();
 
             for (const auto& filePath : files)
             {
-                std::string ext = getExtensionFromPath(filePath);
+                std::string ext = Tools::getExtensionFromPath(filePath);
                 if (std::find(allowedExtensions.begin(), allowedExtensions.end(), ext) != allowedExtensions.end()) {
                     importTexture(filePath);
                 }
@@ -237,7 +237,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
             ImGui::OpenPopup("Error Remove/Replace");
         } else {
             // Open file dialog to choose a PNG file
-            auto filename = openFileDialog({"png"});
+            auto filename = Tools::openFileDialog({"png"});
 
             if (!filename.empty()) {
                 auto newTexture = std::make_shared<sf::Texture>();
@@ -255,7 +255,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
     ImGui::SameLine();
     if (ImGui::Button("Import##ImportIntoTextureList")) {
         // Open file dialog to choose a PNG file
-        auto filePath = openFileDialog({"png"});
+        auto filePath = Tools::openFileDialog({"png"});
 
         if (!filePath.empty()) { // If a file was selected
             importTexture(filePath);
@@ -300,7 +300,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
         ImGui::InputText("##name", &spriteName[0], spriteName.size() + 1);
 
         ImGui::Text("Output Folder:");
-        if (!isValidFolderPath(outputFolder)) {
+        if (!Tools::isValidFolderPath(outputFolder)) {
             ImGui::SameLine();
             ImGui::Text("Invalid path!");
         }
@@ -308,7 +308,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
         ImGui::InputText("##folder", &outputFolder[0], outputFolder.size() + 1);
         ImGui::SameLine();
         if (ImGui::Button("Browse")) {
-            std::string selectedFolder = openFileDialogChooseFolder();
+            std::string selectedFolder = Tools::openFileDialogChooseFolder();
             if (!selectedFolder.empty()) {
                 outputFolder = selectedFolder;
             }
@@ -326,10 +326,10 @@ void SpritesScrollableWindow::drawListControlButtons() {
 
         ImVec2 popupSize = ImGui::GetWindowSize();
 
-        auto colorsCount = pushImGuiGray(!isValidFolderPath(outputFolder));
+        auto colorsCount = Tools::pushImGuiGray(!Tools::isValidFolderPath(outputFolder));
         if (ImGui::Button("Confirm")) {
-            if (isValidFolderPath(outputFolder)) {
-                exportTexture(static_cast<EXPORT_OPTIONS>(formatSelected));
+            if (Tools::isValidFolderPath(outputFolder)) {
+                exportTexture(static_cast<Tools::EXPORT_OPTIONS>(formatSelected));
                 ImGui::CloseCurrentPopup();
             }
         }
@@ -337,8 +337,8 @@ void SpritesScrollableWindow::drawListControlButtons() {
 
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
-            if(!isValidFolderPath(outputFolder)) {
-                outputFolder = getDesktopPath();
+            if(!Tools::isValidFolderPath(outputFolder)) {
+                outputFolder = Tools::getDesktopPath();
             }
             ImGui::CloseCurrentPopup();
         }
@@ -360,8 +360,8 @@ void SpritesScrollableWindow::drawListControlButtons() {
     }
 }
 
-void SpritesScrollableWindow::exportTexture(EXPORT_OPTIONS option) {
-    std::string filePath = (std::filesystem::path(outputFolder) / (trim(spriteName))).string() + getFormatString(option);
+void SpritesScrollableWindow::exportTexture(Tools::EXPORT_OPTIONS option) {
+    std::string filePath = (std::filesystem::path(outputFolder) / (Tools::trim(spriteName))).string() + getFormatString(option);
     assetsManager->exportTexture(filePath, getSelectedSpriteIndex());
 }
 

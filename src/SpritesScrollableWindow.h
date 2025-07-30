@@ -108,7 +108,7 @@ public:
     bool hasUnsavedChanges() const { return assetsManager->hasUnsavedChanges(CATEGORY_SPRITES); };
     void setUnsavedChanges(bool value = true) const { assetsManager->setUnsavedChanges(CATEGORY_SPRITES, value); };
 
-    void exportTexture(EXPORT_OPTIONS option);
+    void exportTexture(Tools::EXPORT_OPTIONS option);
 
     void setDropManager(DropManager* _dm) {
         this->dropManager = _dm;
@@ -124,7 +124,7 @@ private:
 
     char idInputBuffer[10];
 
-    std::string outputFolder = getDesktopPath();
+    std::string outputFolder = Tools::getDesktopPath();
     int formatSelected = 0; // 0 = PNG, 1 = BMP, 2 = JPG
     std::string spriteName = "sprite" + std::to_string(getSelectedSpriteIndex());
 
