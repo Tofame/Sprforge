@@ -213,7 +213,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
 
                 // Play/Pause Animation Button
                 ImGui::SameLine();
-                const char* playButtonLabel = isAnimationPlaying ? "||" : ">";
+                const char* playButtonLabel = isAnimationPlaying ? "||##PauseAnimation" : ">##PlayAnimation";
                 bool canAnimate = unsavedOutfitType->animationsFrames > 1;
                 if (!canAnimate) {
                     isAnimationPlaying = false; // Stop if outfit has only 1 frame
@@ -253,7 +253,9 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 }
                 
                 if (unsavedOutfitType->patternX > 1) {
-                    ImGui::NewLine();
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
                     ImGui::Text("Direction:");
                     ImGui::SameLine();
                     
@@ -262,7 +264,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     if (northSelected) {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                     }
-                    if (ImGui::Button("^", ImVec2(30, 30))) {
+                    if (ImGui::Button("^##NorthDirection", ImVec2(30, 30))) {
                         selectedDirection = 0;
                     }
                     if (northSelected) {
@@ -278,14 +280,12 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                         bool eastSelected = (selectedDirection == 1);
                         if (eastSelected) {
                             ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                         }
-                        // Use ">" for right arrow
-                        if (ImGui::Button(">", ImVec2(30, 30))) {
+                        if (ImGui::Button(">##EastDirection", ImVec2(30, 30))) {
                             selectedDirection = 1;
                         }
                         if (eastSelected) {
-                            ImGui::PopStyleColor(2);
+                            ImGui::PopStyleColor();
                         }
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("East (Right)");
@@ -299,7 +299,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                         if (southSelected) {
                             ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                         }
-                        if (ImGui::Button("v", ImVec2(30, 30))) {
+                        if (ImGui::Button("v##SouthDirection", ImVec2(30, 30))) {
                             selectedDirection = 2;
                         }
                         if (southSelected) {
@@ -317,7 +317,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                         if (westSelected) {
                             ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                         }
-                        if (ImGui::Button("<", ImVec2(30, 30))) {
+                        if (ImGui::Button("<##WestDirection", ImVec2(30, 30))) {
                             selectedDirection = 3;
                         }
                         if (westSelected) {
