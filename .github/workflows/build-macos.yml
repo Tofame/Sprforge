@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch to build'
         required: true
-        default: 'main'
+        default: 'master'
 
 jobs:
   build-macos:
@@ -18,14 +18,17 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Install dependencies
+      - name: Install Xcode Command Line Tools
         run: |
-          # Install CMake if not already present (usually pre-installed on macOS runners)
+          sudo xcode-select --install || echo "CLT already installed"
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Install Homebrew dependencies
+        run: |
+          # Install CMake if not already present
           if ! command -v cmake &> /dev/null; then
             brew install cmake
           fi
-          # Note: nativefiledialog-extended should be in dependencies/ folder
-          # If missing, download it (see README.md for instructions)
 
       - name: Verify nativefiledialog-extended
         run: |
@@ -38,7 +41,12 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=/usr/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+            -DCMAKE_OBJC_COMPILER=/usr/bin/clang \
+            -DCMAKE_OBJCXX_COMPILER=/usr/bin/clang++
 
       - name: Build
         run: |
