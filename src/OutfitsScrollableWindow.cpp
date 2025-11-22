@@ -20,6 +20,8 @@ void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
     assetsManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different outfit
     isAnimationPlaying = false;
+    // Reset direction to North when selecting different outfit
+    selectedDirection = 0;
     if(goToSelect) {
         scrollToButtonIndex = id;
     }
@@ -152,7 +154,12 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 for (int l = 0; l < unsavedOutfitType->layers; l++) {
                     for(int w = 0; w < unsavedOutfitType->width; w++) {
                         for(int h = 0; h < unsavedOutfitType->height; h++) {
-                            int patternXIdx = 0;
+                            // Use selected direction as patternXIdx (0=North, 1=East, 2=South, 3=West)
+                            // Clamp to valid range based on patternX
+                            int patternXIdx = selectedDirection;
+                            if (patternXIdx >= unsavedOutfitType->patternX) {
+                                patternXIdx = 0;
+                            }
                             int patternYIdx = 0;
                             int patternZIdx = 0;
                             int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), l, patternXIdx, patternYIdx, patternZIdx);
@@ -165,11 +172,18 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                                 tempPos.y += std::floor((float)(unsavedOutfitType->height - h - 1) * spriteMaxSize);
                                 ImGui::SetCursorPos(tempPos);
                                 ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                
+                                // Debug tooltip to show sprite info
+                                if (ImGui::IsItemHovered()) {
+                                    ImGui::SetTooltip("Sprite: %d\nDirection: %d (patternX=%d)\nPos: w=%d, h=%d, l=%d", 
+                                        spriteIndex, selectedDirection, patternXIdx, w, h, l);
+                                }
 
                                 if (ImGui::BeginDragDropTarget()) {
                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                         int newTextureId = *(int *) payload->Data;
-                                        assetsManager->setTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
+                                        // Use selected direction when dropping sprites
+                                        assetsManager->setTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, selectedDirection, 0, 0);
                                         assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::OUTFIT);
                                     }
                                     ImGui::EndDragDropTarget();
@@ -229,6 +243,89 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                         }
                         assetsManager->setAnimationFrameSetting(nextFrame);
                         animationClock.restart();
+                    }
+                }
+
+                // Direction buttons (only show if patternX > 1)
+                // Clamp selected direction to valid range
+                if (selectedDirection >= unsavedOutfitType->patternX) {
+                    selectedDirection = 0;
+                }
+                
+                if (unsavedOutfitType->patternX > 1) {
+                    ImGui::NewLine();
+                    ImGui::Text("Direction:");
+                    ImGui::SameLine();
+                    
+                    // North (Up) button - always available if patternX > 1
+                    bool northSelected = (selectedDirection == 0);
+                    if (northSelected) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                    }
+                    if (ImGui::Button("^", ImVec2(30, 30))) {
+                        selectedDirection = 0;
+                    }
+                    if (northSelected) {
+                        ImGui::PopStyleColor();
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("North (Up)");
+                    }
+                    
+                    // East (Right) button - only if patternX >= 2
+                    if (unsavedOutfitType->patternX >= 2) {
+                        ImGui::SameLine();
+                        bool eastSelected = (selectedDirection == 1);
+                        if (eastSelected) {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                        }
+                        // Use ">" for right arrow
+                        if (ImGui::Button(">", ImVec2(30, 30))) {
+                            selectedDirection = 1;
+                        }
+                        if (eastSelected) {
+                            ImGui::PopStyleColor(2);
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("East (Right)");
+                        }
+                    }
+                    
+                    // South (Down) button - only if patternX >= 3
+                    if (unsavedOutfitType->patternX >= 3) {
+                        ImGui::SameLine();
+                        bool southSelected = (selectedDirection == 2);
+                        if (southSelected) {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                        }
+                        if (ImGui::Button("v", ImVec2(30, 30))) {
+                            selectedDirection = 2;
+                        }
+                        if (southSelected) {
+                            ImGui::PopStyleColor();
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("South (Down)");
+                        }
+                    }
+                    
+                    // West (Left) button - only if patternX >= 4
+                    if (unsavedOutfitType->patternX >= 4) {
+                        ImGui::SameLine();
+                        bool westSelected = (selectedDirection == 3);
+                        if (westSelected) {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                        }
+                        if (ImGui::Button("<", ImVec2(30, 30))) {
+                            selectedDirection = 3;
+                        }
+                        if (westSelected) {
+                            ImGui::PopStyleColor();
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("West (Left)");
+                        }
                     }
                 }
 

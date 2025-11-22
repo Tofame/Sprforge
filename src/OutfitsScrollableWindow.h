@@ -40,6 +40,9 @@ private:
     bool isAnimationPlaying = false;
     sf::Clock animationClock;
 
+    // Direction selection (0=North, 1=East, 2=South, 3=West)
+    int selectedDirection = 0;
+
     int getCurrentPage() { return currentPage; }
     void setCurrentPage(int page) { currentPage = page; }
     int getPageFirstIndex() { return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage(); }
