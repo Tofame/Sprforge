@@ -6,12 +6,27 @@ add_executable(Sprforge main.cpp
         Misc/tools.h
         Things/Thing.cpp
         Things/Thing.h
+        Things/ThingType.cpp
+        Things/ThingType.h
+        Things/ThingCategory.h
         Things/Item.cpp
         Things/Item.h
         Things/ItemType.cpp
         Things/ItemType.h
         Things/Items.cpp
         Things/Items.h
+        Things/OutfitType.cpp
+        Things/OutfitType.h
+        Things/Outfits.cpp
+        Things/Outfits.h
+        Things/EffectType.cpp
+        Things/EffectType.h
+        Things/Effects.cpp
+        Things/Effects.h
+        Things/MissileType.cpp
+        Things/MissileType.h
+        Things/Missiles.cpp
+        Things/Missiles.h
         ItemsScrollableWindow.h
         ItemsScrollableWindow.cpp
         ResourceManagers/ConfigManager.cpp
