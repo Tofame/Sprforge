@@ -14,14 +14,10 @@
 #include "../Misc/Warninger.h"
 #include "../Helper/GUIHelper.h"
 #include "../Helper/SavedData.h"
+#include "UIStateManager.h"
 
-enum ASSET_CATEGORY {
-    CATEGORY_ITEMS = 0,
-    CATEGORY_ITEMS_ITEMTYPE = 1,
-    CATEGORY_SPRITES = 2,
-    CATEGORY_OUTFITS = 3,
-    CATEGORY_MAIN_ONES // especially important on changing unsaved changes on - sprites, items, outfits
-};
+// ASSET_CATEGORY is now defined in UIStateManager.h to avoid circular dependency
+// TODO: Move to definitions.h for better organization
 
 struct AssetsInfo {
     uint8_t versionIndex = 0;
@@ -105,7 +101,9 @@ public:
      * @param fromCategory Category to check whether it is unsaved.
      * @return True if there are unsaved changes in that category
      */
-    [[nodiscard]] bool hasUnsavedChanges(ASSET_CATEGORY fromCategory) const;
+    [[nodiscard]] bool hasUnsavedChanges(ASSET_CATEGORY fromCategory) const {
+        return uiStateManager.hasUnsavedChanges(fromCategory);
+    }
     /**
      * @brief Helper method for setting detected changes to Items, Sprites etc.
      *
@@ -118,7 +116,9 @@ public:
      * @param fromCategory Category to set to a bool value
      * @param value true/false to set to category
      */
-    void setUnsavedChanges(ASSET_CATEGORY fromCategory, bool value);
+    void setUnsavedChanges(ASSET_CATEGORY fromCategory, bool value) {
+        uiStateManager.setUnsavedChanges(fromCategory, value);
+    }
 
     // Helper methods, the UnsavedItemType, is a thing
     // That we use to store current changes to ItemType.
@@ -126,44 +126,28 @@ public:
     // either on 'Save', use this unsavedItemType to set it as an actual ItemType
     // or when canceling, we will just discard it.
     void setUnsavedItemType(const std::shared_ptr<ItemType>& itemTypeToCopy, int id) {
-        if (itemTypeToCopy) {
-            unsavedItemTypeCopy = std::make_shared<ItemType>(*itemTypeToCopy); // deep copy
-            unsavedItemTypeId = id;
-        } else {
-            resetUnsavedItemType();
-        }
+        uiStateManager.setUnsavedItemType(itemTypeToCopy, id);
     }
     void resetUnsavedItemType() {
-        unsavedItemTypeCopy.reset();
-        unsavedItemTypeId = -1;
+        uiStateManager.resetUnsavedItemType();
     }
     std::shared_ptr<ItemType> getUnsavedItemType() {
-        if (unsavedItemTypeCopy) {
-            return unsavedItemTypeCopy;
-        } else {
-            // Create a brand new copy of dollItemType
-            // This assumes ItemType has a copy constructor or a way to clone it.
-            // For shared_ptr, you'll need to create a new object and then a new shared_ptr to it.
-            return std::make_shared<ItemType>(*Items::dollItemType);
-        }
+        return uiStateManager.getUnsavedItemType();
     }
     [[nodiscard]] int getUnsavedItemTypeId() const {
-        return unsavedItemTypeId;
+        return uiStateManager.getUnsavedItemTypeId();
     }
 
     [[nodiscard]] int getAnimationFrameSetting() const {
-        return animationFrameSetting;
+        return uiStateManager.getAnimationFrameSetting();
     }
     // ImGui slider uses it to track/update the value. So we needed a reference, to operate on the original
     int& getAnimationFrameSettingRef() {
-        return animationFrameSetting;
+        return uiStateManager.getAnimationFrameSettingRef();
     }
     void setAnimationFrameSetting(int id) {
-        if(id < 0 || id > ConfigManager::getInstance()->getItemMaxAnimationCount()) {
-            return;
-        }
-        animationFrameSetting = id;
-    };
+        uiStateManager.setAnimationFrameSetting(id);
+    }
 
     /**
      * @brief Gets you texture id from a ThingType
@@ -292,10 +276,10 @@ public:
     // but we are stopped by the prompt. If we resume, normally
     // we would have to re-select, with this instead, we don't have to.
     [[nodiscard]] int getLastSelectedItemId() const {
-        return lastSelectedItemId;
+        return uiStateManager.getLastSelectedItemId();
     }
     void setLastSelectedItemId(int id) {
-        lastSelectedItemId = id;
+        uiStateManager.setLastSelectedItemId(id);
     }
 
     // Helper methods, a trick to know
@@ -303,10 +287,15 @@ public:
     // Our example use case: if we last clicked itemType, we know
     // we copy to clipboard item. If it was sprites category, a bitmap would be copied into clipboard.
     ASSET_CATEGORY getLastSelectedCategory() {
-        return lastSelectedCategory;
+        return uiStateManager.getLastSelectedCategory();
     }
     void setLastSelectedCategory(ASSET_CATEGORY category) {
-        lastSelectedCategory = category;
+        uiStateManager.setLastSelectedCategory(category);
+    }
+
+    // Get direct access to UIStateManager for components that want to use it directly
+    UIStateManager* getUIStateManager() {
+        return &uiStateManager;
     }
 
     void exportTexture(const std::string& outputString, int textureId);
@@ -360,6 +349,7 @@ public:
     AssetsInfo m_tempCreation_AssetsInfo;
 private:
     GUIHelper* guiHelper;
+    UIStateManager uiStateManager;  // Manages UI-specific state
 
     std::vector<std::shared_ptr<sf::Texture>> textures;
     // Separate preview texture storage for each category
@@ -370,19 +360,6 @@ private:
     
     // Helper to get the correct preview texture vector for a category
     std::vector<std::shared_ptr<sf::Texture>>& getPreviewTexturesVector(ThingCategory category);
-
-    // To know the current animation frame slider's value
-    int animationFrameSetting = 1;
-
-    bool unsavedSpriteChanges = false;
-    bool unsavedItemChanges = false;
-    bool unsavedItemTypeChange = false;
-
-    std::shared_ptr<ItemType> unsavedItemTypeCopy;
-    int unsavedItemTypeId = -1;
-
-    int lastSelectedItemId = -1; // Useful when we e.g. have unsaved changes and clicked select on some item.
-    ASSET_CATEGORY lastSelectedCategory = CATEGORY_ITEMS;
 
     bool graphicFileLoaded = false; // either .spr or .assets loaded
     bool datLoaded = false; // .dat loaded
