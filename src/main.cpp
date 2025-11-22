@@ -78,16 +78,10 @@ int main() {
                 }
             }
 #ifndef _WIN32
-            // Handle file drops on macOS/Linux using SFML events
-            else if (const auto* fileDropEvent = event.getIf<sf::Event::FilesDropped>()) {
-                std::vector<std::string> filePaths;
-                for (const auto& path : fileDropEvent->paths) {
-                    filePaths.push_back(path);
-                }
-                dropManager.HandleFileDrop(filePaths);
-                // Note: Files are processed in SpritesScrollableWindow when IsDraggingFiles() is checked
-                // The drag state will be cleared after files are processed
-            }
+            // Note: SFML 3.0 doesn't support file drop events
+            // File drag-and-drop on macOS would need to be implemented using Cocoa drag-and-drop APIs
+            // For now, file drops are not supported on macOS/Linux via SFML events
+            // TODO: Implement native macOS drag-and-drop using NSView drag-and-drop methods
 #endif
             else if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
                 // Prevents crash that sometimes happened when ImGui/SFML tried to process weird keys

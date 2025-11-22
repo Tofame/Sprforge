@@ -152,36 +152,38 @@ private:
 };
 #endif
 
-// Cross-platform implementation using SFML file drop events
+// Placeholder implementation for macOS/Linux
+// Note: SFML 3.0 doesn't support file drop events, so file drag-and-drop
+// would need to be implemented using native platform APIs (Cocoa on macOS, GTK on Linux)
+// For now, file drops are not functional on macOS/Linux
 class DropManagerSFML : public DropManager {
 public:
     DropManagerSFML() = default;
     ~DropManagerSFML() = default;
 
     void Initialize(void* nativeWindowHandle) override {
-        // SFML handles file drops via events, no platform-specific initialization needed
+        // TODO: Implement native macOS drag-and-drop using NSView drag-and-drop methods
+        // TODO: Implement native Linux drag-and-drop using GTK drag-and-drop
         (void)nativeWindowHandle; // Suppress unused parameter warning
     }
 
     void Shutdown() override {
-        // No cleanup needed for SFML-based implementation
+        // No cleanup needed currently
     }
 
     void Update(sf::RenderWindow& window) override {
-        // File drops are handled via SFML events in the main event loop
-        // This method can be used for any additional per-frame updates if needed
+        // TODO: Implement native drag-and-drop handling here
         (void)window; // Suppress unused parameter warning
     }
 
-    // Call this from the event loop when a FileDropped event occurs
+    // Call this from native drag-and-drop callbacks when files are dropped
     void HandleFileDrop(const std::vector<std::string>& files) {
         draggedFiles = files;
         // Set isDraggingFiles to false to indicate drop completed (files are ready to process)
-        // This matches Windows behavior where files are stored during drag and processed after drop
         isDraggingFiles = false;
     }
 
-    // Call this when drag operation ends (currently not needed for SFML implementation)
+    // Call this when drag operation ends
     void HandleDragEnd() {
         isDraggingFiles = false;
     }
