@@ -3,6 +3,9 @@
 #include <imgui-SFML.h>
 
 #include "ItemsScrollableWindow.h"
+#include "OutfitsScrollableWindow.h"
+#include "EffectsScrollableWindow.h"
+#include "MissilesScrollableWindow.h"
 #include "SpritesScrollableWindow.h"
 #include "Misc/tools.h"
 #include "Helper/GUIHelper.h"
@@ -35,9 +38,12 @@ int main() {
 
     // initialize assets manager
     auto assetsManager = new AssetsManager(guiHelper);
-    // Create an instance of the SpritesScrollableWindow
+    // Create instances of the scrollable windows
     SpritesScrollableWindow spritesScrollableWindow(window, assetsManager);
     ItemsScrollableWindow itemsScrollableWindow(window, assetsManager);
+    OutfitsScrollableWindow outfitsScrollableWindow(window, assetsManager);
+    EffectsScrollableWindow effectsScrollableWindow(window, assetsManager);
+    MissilesScrollableWindow missilesScrollableWindow(window, assetsManager);
 
     // Add drop manager to panels
     spritesScrollableWindow.setDropManager(&dropManager);
@@ -125,9 +131,18 @@ int main() {
             itemsScrollableWindow.drawItemTypeList(deltaClock);
             ImGui::SameLine();
             itemsScrollableWindow.drawItemTypePanel();
-        } else {
-            // TODO: Add outfit/effect/missile windows
-            ImGui::Text("Outfits/Effects/Missiles editing coming soon...");
+        } else if (selectedCategory == 1) {
+            outfitsScrollableWindow.drawOutfitTypeList(deltaClock);
+            ImGui::SameLine();
+            outfitsScrollableWindow.drawOutfitTypePanel();
+        } else if (selectedCategory == 2) {
+            effectsScrollableWindow.drawEffectTypeList(deltaClock);
+            ImGui::SameLine();
+            effectsScrollableWindow.drawEffectTypePanel();
+        } else if (selectedCategory == 3) {
+            missilesScrollableWindow.drawMissileTypeList(deltaClock);
+            ImGui::SameLine();
+            missilesScrollableWindow.drawMissileTypePanel();
         }
         ImGui::SameLine();
         spritesScrollableWindow.drawTextureList(deltaClock);
@@ -144,7 +159,16 @@ int main() {
 
             ImGui::Text("%s", text);
         }
-        itemsScrollableWindow.drawPaginationControls();
+        // Draw pagination controls based on selected category
+        if (selectedCategory == 0) {
+            itemsScrollableWindow.drawPaginationControls();
+        } else if (selectedCategory == 1) {
+            outfitsScrollableWindow.drawPaginationControls();
+        } else if (selectedCategory == 2) {
+            effectsScrollableWindow.drawPaginationControls();
+        } else if (selectedCategory == 3) {
+            missilesScrollableWindow.drawPaginationControls();
+        }
         ImGui::SameLine(600);
         spritesScrollableWindow.drawListControlButtons();
 

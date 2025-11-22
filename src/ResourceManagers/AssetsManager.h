@@ -166,15 +166,15 @@ public:
     };
 
     /**
-     * @brief Gets you texture id from the ItemType
+     * @brief Gets you texture id from a ThingType
      *
-     * Every ItemType can be composed of more than 1 texture.
+     * Every ThingType can be composed of more than 1 texture.
      * The sprite index is calculated using the Tibia .dat format order (matching ObjectBuilder):
      * spriteIndex = (((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
      *
      * Note: Parameters match ObjectBuilder's getSpriteIndex(w, h, l, px, py, pz, f) order
      *
-     * @param it itemType from which we will get basic information
+     * @param thingType thingType from which we will get basic information
      * @param w cell's 'width' (0-based) - X coordinate
      * @param h cell's 'height' (0-based) - Y coordinate
      * @param a cell's 'animation frame' (1-based, converted to 0-based internally)
@@ -183,54 +183,23 @@ public:
      * @param patternY pattern Y index (0-based, defaults to 0)
      * @param patternZ pattern Z index (0-based, defaults to 0)
      */
+    uint32_t getTextureIdFromThingType(const std::shared_ptr<ThingType>& thingType, int w, int h, int a, 
+                                      int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0);
+    
+    /**
+     * @brief Gets you texture id from the ItemType (wrapper for backward compatibility)
+     */
     uint32_t getTextureIdFromItemType(const std::shared_ptr<ItemType>& it, int w, int h, int a, 
                                       int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
-        // Validate input parameters
-        if (!it || it->width == 0 || it->height == 0 || it->layers == 0 || 
-            it->patternX == 0 || it->patternY == 0 || it->patternZ == 0 || it->animationsFrames == 0) {
-            return 0; // Return blank texture for invalid item
-        }
-        
-        // Validate indices are within bounds
-        if (w < 0 || w >= it->width || h < 0 || h >= it->height ||
-            layer < 0 || layer >= it->layers ||
-            patternX < 0 || patternX >= it->patternX ||
-            patternY < 0 || patternY >= it->patternY ||
-            patternZ < 0 || patternZ >= it->patternZ) {
-            return 0; // Return blank texture for out of bounds indices
-        }
-        
-        // Convert animation frame from 1-based to 0-based
-        int frame = a - 1;
-        if (frame < 0) frame = 0;
-        if (frame >= it->animationsFrames) frame = frame % it->animationsFrames;
-        
-        // Calculate sprite index using Tibia .dat format (matching ObjectBuilder's getSpriteIndex)
-        // Order: frame -> patternZ -> patternY -> patternX -> layers -> height -> width
-        // Formula: (((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
-        // 
-        // ObjectBuilder's formula: ... * height + height) * width + width
-        // Use the formula exactly as ObjectBuilder does, with w and h as passed
-        int spriteIndex = (((((((frame % it->animationsFrames) * it->patternZ + patternZ) * 
-                              it->patternY + patternY) * 
-                              it->patternX + patternX) * 
-                              it->layers + layer) * 
-                              it->height + h) * 
-                              it->width + w);
-        
-        if (spriteIndex < 0 || spriteIndex >= static_cast<int>(it->textureIdsVector.size())) {
-            return 0; // Return blank texture if index is out of bounds
-        }
-        
-        return it->textureIdsVector[spriteIndex];
+        return getTextureIdFromThingType(it, w, h, a, layer, patternX, patternY, patternZ);
     }
     
     /**
-     * @brief Main method to set texture in an ItemType
+     * @brief Main method to set texture in a ThingType
      *
-     * Method to set texture in an ItemType at a desired position.
+     * Method to set texture in a ThingType at a desired position.
      *
-     * @param it itemType that we want to assign texture id to
+     * @param thingType thingType that we want to assign texture id to
      * @param w cell's 'width' (0-based) - X coordinate
      * @param h cell's 'height' (0-based) - Y coordinate
      * @param a cell's 'animation frame' (1-based)
@@ -239,6 +208,12 @@ public:
      * @param patternX pattern X index (0-based, defaults to 0)
      * @param patternY pattern Y index (0-based, defaults to 0)
      * @param patternZ pattern Z index (0-based, defaults to 0)
+     */
+    void setTextureIdFromThingType(std::shared_ptr<ThingType> thingType, int w, int h, int a, int newId,
+                                   int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0);
+    
+    /**
+     * @brief Main method to set texture in an ItemType (wrapper for backward compatibility)
      */
     void setTextureIdFromItemType(std::shared_ptr<ItemType> it, int w, int h, int a, int newId,
                                    int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
@@ -262,59 +237,55 @@ public:
         if (frame < 0) frame = 0;
         if (frame >= it->animationsFrames) frame = frame % it->animationsFrames;
         
-        // Calculate sprite index using Tibia .dat format (matching ObjectBuilder)
-        // Use coordinates directly without inversion (matching getTextureIdFromItemType)
-        int spriteIndex = (((((((frame % it->animationsFrames) * it->patternZ + patternZ) * 
-                              it->patternY + patternY) * 
-                              it->patternX + patternX) * 
-                              it->layers + layer) * 
-                              it->height + h) * 
-                              it->width + w);
-        
-        if (spriteIndex >= 0 && spriteIndex < static_cast<int>(it->textureIdsVector.size())) {
-            it->textureIdsVector[spriteIndex] = newId;
-        }
+        setTextureIdFromThingType(it, w, h, a, newId, layer, patternX, patternY, patternZ);
     }
 
-    std::shared_ptr<sf::Texture> getPreviewTexture(int itemTypeId);
-    void replacePreviewTexture(int itemTypeId, std::shared_ptr<sf::Texture> texture);
+    std::shared_ptr<sf::Texture> getPreviewTexture(int thingTypeId, ThingCategory category = ThingCategory::ITEM);
+    void replacePreviewTexture(int thingTypeId, std::shared_ptr<sf::Texture> texture, ThingCategory category = ThingCategory::ITEM);
     /**
-     * @brief Creates preview texture for ItemType
+     * @brief Creates preview texture for ThingType
      *
      * This method is very costly, since it copies, makes textures
      * and makes render texture. It should be used with caution.
      *
-     * @param id ItemType id
+     * @param id ThingType id
+     * @param category Category of the thing type
      */
-    void createPreviewTexture(int id);
+    void createPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM);
     /**
-     * @brief Creates preview texture for all items on page
+     * @brief Creates preview texture for all things on page
      *
      * This method is very costly, since it copies, makes textures
      * and makes render texture. It should be used with caution.
      *
-     * @param pageFirstItemType Id of first itemType on page
-     * @param pageLastItemType Id of last itemType on page
+     * @param pageFirstThingType Id of first thingType on page
+     * @param pageLastThingType Id of last thingType on page
+     * @param category Category of the thing types
      */
-    void createPreviewTexturesForPage(int pageFirstItemType, int pageLastItemType);
-    void setDecoyPreviewTexture(int id) {
-        replacePreviewTexture(id, std::make_shared<sf::Texture>());
+    void createPreviewTexturesForPage(int pageFirstThingType, int pageLastThingType, ThingCategory category = ThingCategory::ITEM);
+    void setDecoyPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM) {
+        replacePreviewTexture(id, std::make_shared<sf::Texture>(), category);
     }
     void clearPreviewTextures();
 
     /**
-     * @brief Returns a sprite sheet of an item
+     * @brief Returns a sprite sheet of a thing type
      *
      * Example use, is to call this method with animations = 1, which
-     * will effectively help us with creating a preview texture for an itemtype.
-     * Another example, is animations = max item's animations, to get full sprite sheet
-     * used in exporting the item's png etc.
+     * will effectively help us with creating a preview texture for a thingtype.
+     * Another example, is animations = max thing's animations, to get full sprite sheet
+     * used in exporting the thing's png etc.
      *
-     * @param itemTypeId id of itemType that we will be creating sprite sheet based on
-     * @param animations of how many item's animation frames should the sprite sheet be composed of
+     * @param thingTypeId id of thingType that we will be creating sprite sheet based on
+     * @param animations of how many thing's animation frames should the sprite sheet be composed of
+     * @param category Category of the thing type
      * @return sf::Texture that is composed of however many animation frames were requested in animations param
      */
-    sf::Texture getItemSpriteSheet(int itemTypeId, int animations);
+    sf::Texture getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category = ThingCategory::ITEM);
+    
+    // Wrapper for backward compatibility
+    sf::Texture getItemSpriteSheet(int itemTypeId, int animations) { return getThingSpriteSheet(itemTypeId, animations, ThingCategory::ITEM); }
+    
 
     // Helper methods, it is a trick used
     // When we have unsaved item, we click other Item go to it,
