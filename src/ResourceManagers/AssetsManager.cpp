@@ -9,6 +9,10 @@
 #include "misc/cpp/imgui_stdlib.h"
 #include "../Misc/definitions.h"
 #include "../Misc/Timer.h"
+#include "../Things/Outfits.h"
+#include "../Things/Effects.h"
+#include "../Things/Missiles.h"
+#include "../Things/ThingType.h"
 
 AssetsManager::AssetsManager(GUIHelper* guiHelper) {
     this->guiHelper = guiHelper;
@@ -430,10 +434,10 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
         }
         outFile.write(reinterpret_cast<const char*>(&itemCount), sizeof(itemCount));
         
-        // Write outfit count, effect count, missile count (all 0 for now)
-        uint16_t outfitCount = 0;
-        uint16_t effectCount = 0;
-        uint16_t missileCount = 0;
+        // Write outfit count, effect count, missile count
+        uint16_t outfitCount = static_cast<uint16_t>(Outfits::getOutfitTypesCount());
+        uint16_t effectCount = static_cast<uint16_t>(Effects::getEffectTypesCount());
+        uint16_t missileCount = static_cast<uint16_t>(Missiles::getMissileTypesCount());
         outFile.write(reinterpret_cast<const char*>(&outfitCount), sizeof(outfitCount));
         outFile.write(reinterpret_cast<const char*>(&effectCount), sizeof(effectCount));
         outFile.write(reinterpret_cast<const char*>(&missileCount), sizeof(missileCount));
@@ -454,15 +458,15 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
                 outFile.write(reinterpret_cast<const char*>(&itemType->speed), sizeof(itemType->speed));
             }
-            if (itemType->category == GROUND_BORDER) {
+            if (itemType->itemCategory == GROUND_BORDER) {
                 uint8_t flag = 0x01;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
-            if (itemType->category == BOTTOM) {
+            if (itemType->itemCategory == BOTTOM) {
                 uint8_t flag = 0x02;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
-            if (itemType->category == TOP) {
+            if (itemType->itemCategory == TOP) {
                 uint8_t flag = 0x03;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
@@ -582,6 +586,33 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
             }
         }
         
+        // Write outfits (starting from ID 1)
+        for (uint32_t id = 1; id <= outfitCount; ++id) {
+            auto outfitType = Outfits::getOutfitType(id - 1); // 0-based index
+            if (!outfitType) {
+                outfitType = std::make_shared<OutfitType>();
+            }
+            writeThingTypePatterns(outFile, outfitType);
+        }
+
+        // Write effects (starting from ID 1)
+        for (uint32_t id = 1; id <= effectCount; ++id) {
+            auto effectType = Effects::getEffectType(id - 1); // 0-based index
+            if (!effectType) {
+                effectType = std::make_shared<EffectType>();
+            }
+            writeThingTypePatterns(outFile, effectType);
+        }
+
+        // Write missiles (starting from ID 1)
+        for (uint32_t id = 1; id <= missileCount; ++id) {
+            auto missileType = Missiles::getMissileType(id - 1); // 0-based index
+            if (!missileType) {
+                missileType = std::make_shared<MissileType>();
+            }
+            writeThingTypePatterns(outFile, missileType);
+        }
+        
         outFile.close();
         fmt::print("Compiled .dat file successfully: {}\n", decidedPath);
     } catch (const std::exception& e) {
@@ -617,8 +648,14 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
         uint16_t itemCount;
         inFile.read(reinterpret_cast<char*>(&itemCount), sizeof(itemCount));
 
-        // Skip outfit count, effect count, and missile count (2 bytes each)
-        inFile.seekg(6, std::ios_base::cur);
+        // Read outfit count, effect count, and missile count (2 bytes each)
+        uint16_t outfitCount, effectCount, missileCount;
+        inFile.read(reinterpret_cast<char*>(&outfitCount), sizeof(outfitCount));
+        inFile.read(reinterpret_cast<char*>(&effectCount), sizeof(effectCount));
+        inFile.read(reinterpret_cast<char*>(&missileCount), sizeof(missileCount));
+        
+        fmt::print("Loading {} items, {} outfits, {} effects, {} missiles\n", 
+                   itemCount, outfitCount, effectCount, missileCount);
 
         // Read items starting from ID 100
         // ObjectBuilder loops from minID to maxID (inclusive): for (id = minID; id <= maxID; id++)
@@ -662,13 +699,13 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                         inFile.read(reinterpret_cast<char*>(&itemType->speed), sizeof(itemType->speed));
                         break;
                     case 0x01: // GroundBorder
-                        itemType->category = GROUND_BORDER;
+                        itemType->itemCategory = GROUND_BORDER;
                         break;
                     case 0x02: // OnBottom
-                        itemType->category = BOTTOM;
+                        itemType->itemCategory = BOTTOM;
                         break;
                     case 0x03: // OnTop
-                        itemType->category = TOP;
+                        itemType->itemCategory = TOP;
                         break;
                     case 0x04: // Container
                         itemType->setFlag(IS_CONTAINER, true);
@@ -919,6 +956,27 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             // Store the item (ALWAYS push, even if empty/incomplete, to maintain correct count)
             // ObjectBuilder always pushes an item for every ID from minID to maxID
             Items::pushItemType(itemType);
+        }
+
+        // Load outfits (starting from ID 1)
+        for (uint32_t id = 1; id <= outfitCount; ++id) {
+            auto outfitType = std::make_shared<OutfitType>();
+            loadThingTypePatterns(inFile, outfitType);
+            Outfits::pushOutfitType(outfitType);
+        }
+
+        // Load effects (starting from ID 1)
+        for (uint32_t id = 1; id <= effectCount; ++id) {
+            auto effectType = std::make_shared<EffectType>();
+            loadThingTypePatterns(inFile, effectType);
+            Effects::pushEffectType(effectType);
+        }
+
+        // Load missiles (starting from ID 1)
+        for (uint32_t id = 1; id <= missileCount; ++id) {
+            auto missileType = std::make_shared<MissileType>();
+            loadThingTypePatterns(inFile, missileType);
+            Missiles::pushMissileType(missileType);
         }
 
         inFile.close();
@@ -1217,7 +1275,12 @@ void AssetsManager::onGraphicsLoaded(const std::string& loadedPath) {
 }
 
 void AssetsManager::onDatLoaded(const std::string& loadedPath) {
-    fmt::print("Finished loading dat from {}\nTotal: {} itemTypes loaded.\n", loadedPath, Items::getItemTypesCount());
+    fmt::print("Finished loading dat from {}\n", loadedPath);
+    fmt::print("Total: {} items, {} outfits, {} effects, {} missiles loaded.\n", 
+               Items::getItemTypesCount(), 
+               Outfits::getOutfitTypesCount(),
+               Effects::getEffectTypesCount(),
+               Missiles::getMissileTypesCount());
 
     // Only create preview textures for valid items
     // Skip item ID 0 if it's invalid, start from first valid item
@@ -1255,8 +1318,136 @@ void AssetsManager::buttonLoadGraphics(std::string& foundGraphicFilePath) {
     SavedData::getInstance()->setDataString("tempLoadedDatFilePath", foundGraphicFilePath + ".dat");
 }
 
+void AssetsManager::loadThingTypePatterns(std::istream& inFile, std::shared_ptr<ThingType> thingType) {
+    if (!inFile.good()) {
+        return;
+    }
+
+    // Read dimensions
+    inFile.read(reinterpret_cast<char*>(&thingType->width), sizeof(thingType->width));
+    inFile.read(reinterpret_cast<char*>(&thingType->height), sizeof(thingType->height));
+
+    // Validate dimensions
+    if (thingType->width == 0) thingType->width = 1;
+    if (thingType->height == 0) thingType->height = 1;
+
+    if (thingType->width > 1 || thingType->height > 1) {
+        inFile.seekg(1, std::ios_base::cur); // Skip exact size
+    }
+
+    inFile.read(reinterpret_cast<char*>(&thingType->layers), sizeof(thingType->layers));
+    inFile.read(reinterpret_cast<char*>(&thingType->patternX), sizeof(thingType->patternX));
+    inFile.read(reinterpret_cast<char*>(&thingType->patternY), sizeof(thingType->patternY));
+    inFile.read(reinterpret_cast<char*>(&thingType->patternZ), sizeof(thingType->patternZ));
+    inFile.read(reinterpret_cast<char*>(&thingType->animationsFrames), sizeof(thingType->animationsFrames));
+
+    // Validate pattern dimensions
+    if (thingType->layers == 0) thingType->layers = 1;
+    if (thingType->patternX == 0) thingType->patternX = 1;
+    if (thingType->patternY == 0) thingType->patternY = 1;
+    if (thingType->patternZ == 0) thingType->patternZ = 1;
+    if (thingType->animationsFrames == 0) thingType->animationsFrames = 1;
+
+    bool isAnimation = thingType->animationsFrames > 1;
+
+    // Skip frame durations if needed
+    if (isAnimation && m_assetsInfo.frameDurations) {
+        inFile.seekg(6 + 8 * thingType->animationsFrames, std::ios_base::cur);
+    }
+
+    // Calculate number of sprites
+    uint32_t numSprites = thingType->width * thingType->height * thingType->layers *
+                          thingType->patternX * thingType->patternY * thingType->patternZ *
+                          thingType->animationsFrames;
+
+    // Resize vector to hold all sprites
+    thingType->textureIdsVector.resize(numSprites, 0);
+
+    // Read sprite IDs
+    for (uint32_t i = 0; i < numSprites; ++i) {
+        uint32_t spriteId = 0;
+        if (m_assetsInfo.extended) {
+            uint8_t bytes[4];
+            inFile.read(reinterpret_cast<char*>(bytes), 4);
+            if (inFile.gcount() != 4) break;
+            spriteId = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+        } else {
+            uint8_t bytes[2];
+            inFile.read(reinterpret_cast<char*>(bytes), 2);
+            if (inFile.gcount() != 2) break;
+            spriteId = bytes[0] | (bytes[1] << 8);
+        }
+        thingType->textureIdsVector[i] = spriteId;
+    }
+}
+
+void AssetsManager::writeThingTypePatterns(std::ostream& outFile, std::shared_ptr<ThingType> thingType) {
+    // Write dimensions
+    outFile.write(reinterpret_cast<const char*>(&thingType->width), sizeof(thingType->width));
+    outFile.write(reinterpret_cast<const char*>(&thingType->height), sizeof(thingType->height));
+
+    // Write exact size if item is larger than 1x1
+    if (thingType->width > 1 || thingType->height > 1) {
+        uint8_t exactSize = 1;
+        outFile.write(reinterpret_cast<const char*>(&exactSize), sizeof(exactSize));
+    }
+
+    // Validate and clamp pattern/animation values before writing
+    uint8_t layers = (thingType->layers == 0) ? 1 : thingType->layers;
+    uint8_t patternX = (thingType->patternX == 0) ? 1 : thingType->patternX;
+    uint8_t patternY = (thingType->patternY == 0) ? 1 : thingType->patternY;
+    uint8_t patternZ = (thingType->patternZ == 0) ? 1 : thingType->patternZ;
+    uint8_t animationsFrames = (thingType->animationsFrames == 0) ? 1 : thingType->animationsFrames;
+
+    // Write pattern and animation data
+    outFile.write(reinterpret_cast<const char*>(&layers), sizeof(layers));
+    outFile.write(reinterpret_cast<const char*>(&patternX), sizeof(patternX));
+    outFile.write(reinterpret_cast<const char*>(&patternY), sizeof(patternY));
+    outFile.write(reinterpret_cast<const char*>(&patternZ), sizeof(patternZ));
+    outFile.write(reinterpret_cast<const char*>(&animationsFrames), sizeof(animationsFrames));
+
+    // Write frame durations if needed
+    bool isAnimation = animationsFrames > 1;
+    if (isAnimation && m_assetsInfo.frameDurations) {
+        uint8_t padding[6] = {0};
+        outFile.write(reinterpret_cast<const char*>(padding), 6);
+        for (uint8_t f = 0; f < animationsFrames; ++f) {
+            uint64_t duration = 100; // Default 100ms per frame
+            outFile.write(reinterpret_cast<const char*>(&duration), sizeof(duration));
+        }
+    }
+
+    // Calculate and write sprite IDs
+    uint32_t numSprites = thingType->width * thingType->height * layers *
+                         patternX * patternY * patternZ * animationsFrames;
+
+    for (uint32_t i = 0; i < numSprites && i < thingType->textureIdsVector.size(); ++i) {
+        uint32_t spriteId = thingType->textureIdsVector[i];
+        if (m_assetsInfo.extended) {
+            outFile.write(reinterpret_cast<const char*>(&spriteId), sizeof(spriteId));
+        } else {
+            uint16_t spriteId16 = static_cast<uint16_t>(spriteId);
+            outFile.write(reinterpret_cast<const char*>(&spriteId16), sizeof(spriteId16));
+        }
+    }
+
+    // Fill remaining sprites with 0 if vector is smaller than expected
+    for (uint32_t i = thingType->textureIdsVector.size(); i < numSprites; ++i) {
+        if (m_assetsInfo.extended) {
+            uint32_t zero = 0;
+            outFile.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+        } else {
+            uint16_t zero = 0;
+            outFile.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+        }
+    }
+}
+
 void AssetsManager::unloadDat() {
     Items::clearItemTypes();
+    Outfits::clearOutfitTypes();
+    Effects::clearEffectTypes();
+    Missiles::clearMissileTypes();
     clearPreviewTextures();
 }
 

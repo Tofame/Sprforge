@@ -602,17 +602,17 @@ void ItemsScrollableWindow::drawItemTypePanel() {
             if (ImGui::CollapsingHeader("Flags", ImGuiTreeNodeFlags_DefaultOpen)) {
                 // Radio button group for mutually exclusive options
                 ImGui::Text("Flag Type:");
-                if (ImGui::RadioButton("Common", previewIt->category == COMMON)) {
-                    previewIt->category = COMMON;
+                if (ImGui::RadioButton("Common", previewIt->itemCategory == COMMON)) {
+                    previewIt->itemCategory = COMMON;
                 };
-                if (ImGui::RadioButton("Ground Border", previewIt->category == GROUND_BORDER)) {
-                    previewIt->category = GROUND_BORDER;
+                if (ImGui::RadioButton("Ground Border", previewIt->itemCategory == GROUND_BORDER)) {
+                    previewIt->itemCategory = GROUND_BORDER;
                 };
-                if (ImGui::RadioButton("Bottom", previewIt->category == BOTTOM)) {
-                    previewIt->category = BOTTOM;
+                if (ImGui::RadioButton("Bottom", previewIt->itemCategory == BOTTOM)) {
+                    previewIt->itemCategory = BOTTOM;
                 };
-                if (ImGui::RadioButton("Top", previewIt->category == TOP)) {
-                    previewIt->category = TOP;
+                if (ImGui::RadioButton("Top", previewIt->itemCategory == TOP)) {
+                    previewIt->itemCategory = TOP;
                 };
 
                 ImGui::Separator(); // A line to separate radio group from checkboxes

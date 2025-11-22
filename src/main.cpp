@@ -97,9 +97,38 @@ int main() {
         // Call the update method of the SpritesScrollableWindow
         ImGui::Begin("Asset Manager");
         assetsManager->drawAssetsManagerControls();
-        itemsScrollableWindow.drawItemTypeList(deltaClock);
-        ImGui::SameLine();
-        itemsScrollableWindow.drawItemTypePanel();
+        
+        // Category selection tabs
+        static int selectedCategory = 0; // 0=Items, 1=Outfits, 2=Effects, 3=Missiles
+        if (ImGui::BeginTabBar("ThingCategoryTabs")) {
+            if (ImGui::BeginTabItem("Items")) {
+                selectedCategory = 0;
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Outfits")) {
+                selectedCategory = 1;
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Effects")) {
+                selectedCategory = 2;
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Missiles")) {
+                selectedCategory = 3;
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+        
+        // Draw appropriate window based on selected category
+        if (selectedCategory == 0) {
+            itemsScrollableWindow.drawItemTypeList(deltaClock);
+            ImGui::SameLine();
+            itemsScrollableWindow.drawItemTypePanel();
+        } else {
+            // TODO: Add outfit/effect/missile windows
+            ImGui::Text("Outfits/Effects/Missiles editing coming soon...");
+        }
         ImGui::SameLine();
         spritesScrollableWindow.drawTextureList(deltaClock);
 

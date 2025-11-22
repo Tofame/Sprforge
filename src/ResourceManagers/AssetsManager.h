@@ -8,6 +8,7 @@
 #include <cstdint>
 #include "../Things/ItemType.h"
 #include "../Things/Items.h"
+#include "../Things/ThingType.h"
 #include "imgui.h"
 #include "ConfigManager.h"
 #include "../Misc/Warninger.h"
@@ -79,6 +80,10 @@ public:
     // Returns true if getTextureCount() is > 0.
     bool loadSpr(const std::string& sprFilePath = "");
     void loadOTDat(const std::string& datFilePath = "");
+    
+    // Helper functions for loading/compiling different thing types
+    void loadThingTypePatterns(std::istream& inFile, std::shared_ptr<ThingType> thingType);
+    void writeThingTypePatterns(std::ostream& outFile, std::shared_ptr<ThingType> thingType);
 
     // Unloads all - textures, dat etc.
     void unload();
