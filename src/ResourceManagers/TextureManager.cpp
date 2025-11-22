@@ -35,10 +35,10 @@ std::shared_ptr<sf::Texture> TextureManager::getTexture(int id) {
 
 ImTextureID TextureManager::getImGuiTexture(int id) {
     if(!isValidTextureIndex(id)) {
-        return (ImTextureID)BLANK_TEXTURE->getNativeHandle();
+        return textureHandleToImGuiID(BLANK_TEXTURE.get());
     }
     auto texture = textures.at(id);
-    return (ImTextureID)texture->getNativeHandle();
+    return textureHandleToImGuiID(texture.get());
 }
 
 bool TextureManager::isValidTexture(std::shared_ptr<sf::Texture> texture) {

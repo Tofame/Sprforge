@@ -82,7 +82,7 @@ void MissilesScrollableWindow::drawMissileTypeList(sf::Clock& deltaClock) {
         bool isSelected = (i == getSelectedButtonIndex());
         auto texture = previewManager->getPreviewTexture(i, ThingCategory::MISSILE);
         ImGui::PushID(i);
-        if (ImGui::ImageButton("##MissileTypeButton", (ImTextureID) texture->getNativeHandle(),
+        if (ImGui::ImageButton("##MissileTypeButton", TextureManager::textureHandleToImGuiID(texture.get()),
             ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
             selectMissile(i, false);
         }
@@ -195,7 +195,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                                                 tempPos.x += std::floor((float)(unsavedMissileType->width - w - 1) * spriteMaxSize);
                                                 tempPos.y += std::floor((float)(unsavedMissileType->height - h - 1) * spriteMaxSize);
                                                 ImGui::SetCursorScreenPos(tempPos);
-                                                ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                                ImGui::Image(TextureManager::textureHandleToImGuiID(texture.get()), previewSize);
                                                 
                                                 if (ImGui::BeginDragDropTarget()) {
                                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
@@ -236,7 +236,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                                     tempPos.x += std::floor((float)(unsavedMissileType->width - w - 1) * spriteMaxSize);
                                     tempPos.y += std::floor((float)(unsavedMissileType->height - h - 1) * spriteMaxSize);
                                     ImGui::SetCursorPos(tempPos);
-                                    ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                    ImGui::Image(TextureManager::textureHandleToImGuiID(texture.get()), previewSize);
                                     if (ImGui::BeginDragDropTarget()) {
                                         if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                             int newTextureId = *(int *) payload->Data;

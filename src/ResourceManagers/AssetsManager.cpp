@@ -1,6 +1,4 @@
 #include <SFML/Graphics.hpp>
-#include <iostream>
-#include <fstream>
 #include <vector>
 #include <filesystem>
 
@@ -8,7 +6,6 @@
 #include "../Helper/SavedData.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include "../Misc/definitions.h"
-#include "../Misc/Timer.h"
 #include "../Things/Outfits.h"
 #include "../Things/Effects.h"
 #include "../Things/Missiles.h"
@@ -31,157 +28,6 @@ AssetsManager::AssetsManager(GUIHelper* guiHelper)
 AssetsManager::~AssetsManager() {
     unload();
 }
-
-// getTexture is now inline in header, delegating to textureManager
-
-// Helper function to read a little-endian 16-bit integer from a byte array
-uint16_t readLE16(const uint8_t* data) {
-    return data[0] | (data[1] << 8);
-}
-
-// loadSpr is now inline in header, delegating to sprFileHandler
-// Old implementation removed - see SprFileHandler.cpp
-// Commented out to avoid compilation errors
-/*
-bool AssetsManager::loadSpr_OLD(const std::string& sprFilePath) {
-    Timer timer("Loading .spr");
-
-    std::string decidedPath = sprFilePath;
-    if(decidedPath.empty()) {
-        decidedPath = ConfigManager::getInstance()->getPathAssets() + "Tibia.spr";
-    }
-
-    std::ifstream file(decidedPath, std::ios::binary);
-    if (!file.is_open()) {
-        Warninger::sendErrorMsg(FUNC_NAME, "File not found: " + decidedPath);
-        return false;
-    }
-
-    // Read and verify signature
-    uint32_t signature;
-    file.read(reinterpret_cast<char*>(&signature), 4);
-    fmt::print("Signature of loaded spr: {}\n", signature);
-    setLoadedSprSignature(signature);
-
-    // Read sprite count (2 bytes for non-extended format)
-    uint32_t spriteCount;
-    if(m_assetsInfo.extended) {
-        file.read(reinterpret_cast<char *>(&spriteCount), 4);
-    } else {
-        uint16_t tempSpriteCount;
-        file.read(reinterpret_cast<char*>(&tempSpriteCount), 2);
-        spriteCount = static_cast<uint32_t>(tempSpriteCount);
-    }
-
-    // Add BLANK_TEXTURE, as air (id 0)
-    textureManager.getTextures().reserve(1 + spriteCount);
-    textureManager.getTextures().push_back(textureManager.getBlankTexture());
-
-    // Read sprite offsets (4 bytes per offset)
-    std::vector<uint32_t> offsets(spriteCount);
-    for (uint32_t i = 0; i < spriteCount; ++i) {
-        file.read(reinterpret_cast<char*>(&offsets[i]), 4);
-    }
-
-    // temp var to decide loaded sprite size
-    const auto& singleSpriteSize = getSpriteDimensionsVector().at(m_assetsInfo.dimensionIndex);
-
-    // Process each sprite
-    // IMPORTANT: We must push a texture for EVERY sprite ID, even if offset is 0 or sprite is empty
-    // This maintains the correct mapping: sprite ID in .dat file = texture index in our vector
-    for (uint32_t spriteId = 1; spriteId <= spriteCount; ++spriteId) {
-        uint32_t offset = offsets[spriteId - 1];
-        std::shared_ptr<sf::Texture> texture;
-        
-        if (offset == 0) {
-            // Sprite doesn't exist (offset 0), push blank texture to maintain index mapping
-            texture = textureManager.getBlankTexture();
-        } else {
-            file.seekg(offset, std::ios::beg);
-            if (!file.good()) {
-                Warninger::sendWarning(FUNC_NAME, "Failed to seek to offset for sprite " + std::to_string(spriteId) + ". Using blank texture.");
-                texture = textureManager.getBlankTexture();
-            } else {
-                file.ignore(3); // Skip unused bytes (RGB)
-
-                // Read sprite data size
-                uint16_t dataSize;
-                file.read(reinterpret_cast<char*>(&dataSize), 2);
-                
-                if (!file.good() || dataSize == 0) {
-                    // Empty sprite or read error, use blank texture
-                    texture = textureManager.getBlankTexture();
-                } else {
-                    // Read compressed sprite data
-                    std::vector<uint8_t> spriteData(dataSize);
-                    file.read(reinterpret_cast<char*>(spriteData.data()), dataSize);
-                    
-                    if (!file.good()) {
-                        Warninger::sendWarning(FUNC_NAME, "Failed to read sprite data for sprite " + std::to_string(spriteId) + ". Using blank texture.");
-                        texture = textureManager.getBlankTexture();
-                    } else {
-                        // Process RLE data into RGBA pixels
-                        std::vector<uint8_t> pixels(singleSpriteSize * singleSpriteSize * 4, 0); // RGBA buffer
-                        size_t dataPtr = 0;
-                        size_t pixelPtr = 0;
-
-                        while (pixelPtr < singleSpriteSize * singleSpriteSize && dataPtr < spriteData.size()) {
-                            // Read transparent pixels count
-                            if (dataPtr + 2 > spriteData.size()) break;
-                            uint16_t transparent = readLE16(&spriteData[dataPtr]);
-                            dataPtr += 2;
-                            pixelPtr += transparent;
-
-                            if (pixelPtr >= singleSpriteSize * singleSpriteSize) break;
-
-                            // Read colored pixels count
-                            if (dataPtr + 2 > spriteData.size()) break;
-                            uint16_t colored = readLE16(&spriteData[dataPtr]);
-                            dataPtr += 2;
-
-                            for (uint16_t i = 0; i < colored; ++i) {
-                                if (pixelPtr >= singleSpriteSize * singleSpriteSize || dataPtr + 3 > spriteData.size()) break;
-
-                                // Read RGB values
-                                uint8_t r = spriteData[dataPtr++];
-                                uint8_t g = spriteData[dataPtr++];
-                                uint8_t b = spriteData[dataPtr++];
-                                uint8_t a = m_assetsInfo.transparency ? (dataPtr < spriteData.size() ? spriteData[dataPtr++] : 255) : 255;
-
-                                // Fill RGBA buffer
-                                size_t idx = pixelPtr * 4;
-                                pixels[idx] = r;
-                                pixels[idx + 1] = g;
-                                pixels[idx + 2] = b;
-                                pixels[idx + 3] = a;
-
-                                pixelPtr++;
-                            }
-                        }
-
-                        // Create texture from pixels
-                        // Create an image from pixel data, then load texture from it
-                        sf::Image image(sf::Vector2u(singleSpriteSize, singleSpriteSize), pixels.data());
-                        texture = std::make_shared<sf::Texture>();
-                        if (texture->loadFromImage(image)) {
-                            // Texture loaded successfully
-                        } else {
-                            Warninger::sendWarning(FUNC_NAME, "Failed to create texture for sprite " + std::to_string(spriteId) + ". Using blank texture.");
-                            texture = textureManager.getBlankTexture();
-                        }
-                    }
-                }
-            }
-        }
-        
-        // ALWAYS push a texture (even if blank) to maintain correct sprite ID to texture index mapping
-        textureManager.getTextures().push_back(texture);
-    }
-
-    onGraphicsLoaded(decidedPath);
-    return true;
-}
-*/
 
 void AssetsManager::drawAssetsManagerControls() {
     auto newAssetsIcon = getGuiHelper()->getImGuiTexture("icon_newAssets");

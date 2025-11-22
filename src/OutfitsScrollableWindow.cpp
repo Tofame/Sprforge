@@ -97,7 +97,7 @@ void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
         auto texture = previewManager->getPreviewTexture(i, ThingCategory::OUTFIT);
 
         ImGui::PushID(i);
-        if (ImGui::ImageButton("##OutfitTypeButton", (ImTextureID) texture->getNativeHandle(),
+        if (ImGui::ImageButton("##OutfitTypeButton", TextureManager::textureHandleToImGuiID(texture.get()),
             ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
             selectOutfit(i, false);
         }
@@ -180,7 +180,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                                 tempPos.x += std::floor((float)(unsavedOutfitType->width - w - 1) * spriteMaxSize);
                                 tempPos.y += std::floor((float)(unsavedOutfitType->height - h - 1) * spriteMaxSize);
                                 ImGui::SetCursorPos(tempPos);
-                                ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                ImGui::Image(TextureManager::textureHandleToImGuiID(texture.get()), previewSize);
                                 
                                 // Debug tooltip to show sprite info
                                 if (ImGui::IsItemHovered()) {

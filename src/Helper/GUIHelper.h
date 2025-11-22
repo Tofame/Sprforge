@@ -24,7 +24,8 @@ public:
         auto it = guiTextures.find(name);
         if (it != guiTextures.end()) {
             auto texture = it->second;
-            return (ImTextureID)texture->getNativeHandle(); // Return the pointer to the texture if found
+            // Safely convert SFML native handle to ImGui texture ID
+            return reinterpret_cast<ImTextureID>(static_cast<uintptr_t>(texture->getNativeHandle()));
         }
 
         throw std::runtime_error("[GUIHelper::getTexture()] Cannot load a texture called: " + name);

@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <memory>
+#include <cstdint>
 #include "imgui.h"
 
 /**
@@ -58,6 +59,20 @@ public:
 
     // Blank texture access
     std::shared_ptr<sf::Texture> getBlankTexture() const { return BLANK_TEXTURE; }
+
+    /**
+     * @brief Safely converts SFML texture native handle to ImGui texture ID
+     * 
+     * This helper function properly handles the conversion from SFML's integer-based
+     * native handle to ImGui's pointer-based texture ID, avoiding size mismatch warnings.
+     * 
+     * @param texture Pointer to SFML texture
+     * @return ImTextureID for use with ImGui
+     */
+    static ImTextureID textureHandleToImGuiID(const sf::Texture* texture) {
+        if (!texture) return nullptr;
+        return reinterpret_cast<ImTextureID>(static_cast<uintptr_t>(texture->getNativeHandle()));
+    }
 
 private:
     std::vector<std::shared_ptr<sf::Texture>> textures;

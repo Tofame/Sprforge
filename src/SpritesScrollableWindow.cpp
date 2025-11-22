@@ -67,7 +67,7 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
         if (ImGui::ImageButton
         (
             "##SpriteButton",
-            (ImTextureID)texture->getNativeHandle(),
+            TextureManager::textureHandleToImGuiID(texture.get()),
             ConfigManager::getInstance()->getSpriteButtonSize(), // size
             ImVec2(0, 0), // uv0, default to (0,0) for full texture
             ImVec2(1, 1) // uv1, default to (1,1) for full texture
@@ -128,7 +128,7 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
         // Start drag source
         if (ImGui::BeginDragDropSource()) {
             ImGui::SetDragDropPayload("TEXTURE_ID", &i, sizeof(int)); // Attach the texture ID as payload
-            ImGui::Image((ImTextureID)texture->getNativeHandle(), ImVec2(48, 48));
+            ImGui::Image(TextureManager::textureHandleToImGuiID(texture.get()), ImVec2(48, 48));
             ImGui::EndDragDropSource();
         }
 

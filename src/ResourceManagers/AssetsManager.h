@@ -1,7 +1,6 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
+#include <iosfwd>
 #include <vector>
 #include <unordered_map>
 #include <SFML/Graphics.hpp>
@@ -21,8 +20,6 @@
 #include "SprFileHandler.h"
 #include "DatFileHandler.h"
 
-// ASSET_CATEGORY is now defined in UIStateManager.h to avoid circular dependency
-// TODO: Move to definitions.h for better organization
 
 struct AssetsInfo {
     uint8_t versionIndex = 0;

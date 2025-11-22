@@ -26,6 +26,8 @@ int main() {
     // Create a single application window
     sf::RenderWindow window(sf::VideoMode({1100, 800}), "Sprforge");
     window.setFramerateLimit(60);
+    // Request focus to ensure the window is active when created
+    window.requestFocus();
 
     // Setup and register your DropManager here
     DropManager dropManager;
@@ -34,7 +36,10 @@ int main() {
     RegisterDragDrop(hwnd, &dropManager);
 
     // Initialize ImGui-SFML
-    ImGui::SFML::Init(window);
+    if (!ImGui::SFML::Init(window)) {
+        std::cerr << "Failed to initialize ImGui-SFML" << std::endl;
+        return -1;
+    }
     window.resetGLStates();
 
     auto guiHelper = new GUIHelper();
@@ -67,6 +72,29 @@ int main() {
                 } else {
                     window.close();
                 }
+            }
+            else if (event.is<sf::Event::FocusLost>()) {
+                // When window loses focus, clear ImGui's input state to prevent stuck inputs
+                ImGuiIO& io = ImGui::GetIO();
+                // Clear all mouse buttons
+                for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) {
+                    io.MouseDown[i] = false;
+                }
+                // Clear keyboard state
+                io.ClearInputKeys();
+                io.ClearInputCharacters();
+            }
+            else if (event.is<sf::Event::FocusGained>()) {
+                // When window regains focus, request focus again and reset ImGui state
+                window.requestFocus();
+                ImGuiIO& io = ImGui::GetIO();
+                // Clear all mouse buttons
+                for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) {
+                    io.MouseDown[i] = false;
+                }
+                // Clear keyboard state
+                io.ClearInputKeys();
+                io.ClearInputCharacters();
             }
             else if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
                 // Prevents crash that sometimes happened when ImGui/SFML tried to process weird keys
