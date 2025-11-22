@@ -36,6 +36,10 @@ private:
     std::shared_ptr<EffectType> unsavedEffectType;
     int unsavedEffectTypeId = -1;
 
+    // Animation playback
+    bool isAnimationPlaying = false;
+    sf::Clock animationClock;
+
     int getCurrentPage() { return currentPage; }
     void setCurrentPage(int page) { currentPage = page; }
     int getPageFirstIndex() { return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage(); }

@@ -18,6 +18,8 @@ void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
     }
 
     assetsManager->setAnimationFrameSetting(1);
+    // Stop animation when selecting a different outfit
+    isAnimationPlaying = false;
     if(goToSelect) {
         scrollToButtonIndex = id;
     }
@@ -187,8 +189,48 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 ImGui::SameLine();
                 float width = ImGui::GetContentRegionAvail().x * 0.15f;
                 ImGui::PushItemWidth(width);
+                int previousFrame = assetsManager->getAnimationFrameSetting();
                 ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, unsavedOutfitType->animationsFrames);
+                // Stop animation if user manually changes the slider
+                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+                    isAnimationPlaying = false;
+                }
                 ImGui::PopItemWidth();
+
+                // Play/Pause Animation Button
+                ImGui::SameLine();
+                const char* playButtonLabel = isAnimationPlaying ? "||" : ">";
+                bool canAnimate = unsavedOutfitType->animationsFrames > 1;
+                if (!canAnimate) {
+                    isAnimationPlaying = false; // Stop if outfit has only 1 frame
+                }
+                if (ImGui::Button(playButtonLabel, ImVec2(30, 0))) {
+                    if (canAnimate) {
+                        isAnimationPlaying = !isAnimationPlaying;
+                        if (isAnimationPlaying) {
+                            animationClock.restart();
+                        }
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
+                }
+
+                // Animation loop logic
+                if (isAnimationPlaying && canAnimate) {
+                    float elapsed = animationClock.getElapsedTime().asSeconds();
+                    if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
+                        // Advance to next frame
+                        int currentFrame = assetsManager->getAnimationFrameSetting();
+                        int nextFrame = currentFrame + 1;
+                        // Loop using modulo: frame 1 to animationsFrames, then back to 1
+                        if (nextFrame > unsavedOutfitType->animationsFrames) {
+                            nextFrame = 1;
+                        }
+                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        animationClock.restart();
+                    }
+                }
 
                 ImVec2 gridTotalSize = ImVec2(spriteMaxSize * unsavedOutfitType->width, spriteMaxSize * unsavedOutfitType->height);
                 if (drawGrid) {
@@ -260,8 +302,14 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     ImGui::EndTable();
                 }
                 ImGui::EndGroup();
+            } else {
+                // Stop animation if no outfit is selected
+                isAnimationPlaying = false;
             }
             ImGui::EndTabItem();
+        } else {
+            // Stop animation when not on texture tab
+            isAnimationPlaying = false;
         }
         ImGui::EndTabBar();
 
