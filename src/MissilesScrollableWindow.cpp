@@ -39,7 +39,7 @@ bool MissilesScrollableWindow::removeMissileType() {
 
 void MissilesScrollableWindow::drawMissileTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
-    ImGui::Text("Missiles list (Max missileType: %d)", (Missiles::getMissileTypesCount() - 1));
+    ImGui::Text("Missiles list (Max missileType: %d)", (Missiles::getMissileTypesCount() > 0 ? (Missiles::getMissileTypesCount() - 1) : 0));
     ImVec2 listSize(250, 500);
     ImGui::BeginChild("MissilesList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
@@ -48,9 +48,26 @@ void MissilesScrollableWindow::drawMissileTypeList(sf::Clock& deltaClock) {
         ImGui::EndGroup();
         return;
     }
+    
+    // Show message if no missiles loaded
+    if (Missiles::getMissileTypesCount() == 0) {
+        ImGui::Text("No missiles loaded. Load a .dat file to see missiles.");
+        ImGui::EndChild();
+        ImGui::EndGroup();
+        return;
+    }
+    
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
-    for (int i = startIndex; i < endIndex; ++i) {
+    
+    // Create preview textures for current page if needed
+    static int lastMissilePage = -1;
+    if (getCurrentPage() != lastMissilePage) {
+        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::MISSILE);
+        lastMissilePage = getCurrentPage();
+    }
+    
+    for (int i = startIndex; i < endIndex && i < (int)Missiles::getMissileTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
         auto texture = assetsManager->getPreviewTexture(i, ThingCategory::MISSILE);
         ImGui::PushID(i);
@@ -236,7 +253,7 @@ void MissilesScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("<< Page##MissileTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::MISSILE);
+            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
         }
     }
     ImGui::SameLine();
@@ -256,7 +273,7 @@ void MissilesScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##MissileTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::MISSILE);
+            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
         }
     }
     if (ImGui::Button("New Missile##NewMissileTypeFromList")) {

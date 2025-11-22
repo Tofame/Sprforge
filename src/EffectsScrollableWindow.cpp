@@ -39,7 +39,7 @@ bool EffectsScrollableWindow::removeEffectType() {
 
 void EffectsScrollableWindow::drawEffectTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
-    ImGui::Text("Effects list (Max effectType: %d)", (Effects::getEffectTypesCount() - 1));
+    ImGui::Text("Effects list (Max effectType: %d)", (Effects::getEffectTypesCount() > 0 ? (Effects::getEffectTypesCount() - 1) : 0));
     ImVec2 listSize(250, 500);
     ImGui::BeginChild("EffectsList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
@@ -48,9 +48,26 @@ void EffectsScrollableWindow::drawEffectTypeList(sf::Clock& deltaClock) {
         ImGui::EndGroup();
         return;
     }
+    
+    // Show message if no effects loaded
+    if (Effects::getEffectTypesCount() == 0) {
+        ImGui::Text("No effects loaded. Load a .dat file to see effects.");
+        ImGui::EndChild();
+        ImGui::EndGroup();
+        return;
+    }
+    
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
-    for (int i = startIndex; i < endIndex; ++i) {
+    
+    // Create preview textures for current page if needed
+    static int lastEffectPage = -1;
+    if (getCurrentPage() != lastEffectPage) {
+        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::EFFECT);
+        lastEffectPage = getCurrentPage();
+    }
+    
+    for (int i = startIndex; i < endIndex && i < (int)Effects::getEffectTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
         auto texture = assetsManager->getPreviewTexture(i, ThingCategory::EFFECT);
         ImGui::PushID(i);
@@ -236,7 +253,7 @@ void EffectsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("<< Page##EffectTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::EFFECT);
+            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
         }
     }
     ImGui::SameLine();
@@ -256,7 +273,7 @@ void EffectsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##EffectTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::EFFECT);
+            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
         }
     }
     if (ImGui::Button("New Effect##NewEffectTypeFromList")) {

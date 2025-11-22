@@ -50,7 +50,7 @@ bool OutfitsScrollableWindow::removeOutfitType() {
 
 void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
-    ImGui::Text("Outfits list (Max outfitType: %d)", (Outfits::getOutfitTypesCount() - 1));
+    ImGui::Text("Outfits list (Max outfitType: %d)", (Outfits::getOutfitTypesCount() > 0 ? (Outfits::getOutfitTypesCount() - 1) : 0));
 
     ImVec2 listSize(250, 500);
     ImGui::BeginChild("OutfitsList", listSize, true);
@@ -61,10 +61,25 @@ void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
         return;
     }
 
+    // Show message if no outfits loaded
+    if (Outfits::getOutfitTypesCount() == 0) {
+        ImGui::Text("No outfits loaded. Load a .dat file to see outfits.");
+        ImGui::EndChild();
+        ImGui::EndGroup();
+        return;
+    }
+
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
+    
+    // Create preview textures for current page if needed
+    static int lastOutfitPage = -1;
+    if (getCurrentPage() != lastOutfitPage) {
+        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::OUTFIT);
+        lastOutfitPage = getCurrentPage();
+    }
 
-    for (int i = startIndex; i < endIndex; ++i) {
+    for (int i = startIndex; i < endIndex && i < (int)Outfits::getOutfitTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
         auto texture = assetsManager->getPreviewTexture(i, ThingCategory::OUTFIT);
 
@@ -297,7 +312,7 @@ void OutfitsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##OutfitTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::OUTFIT);
+            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::OUTFIT);
         }
     }
 

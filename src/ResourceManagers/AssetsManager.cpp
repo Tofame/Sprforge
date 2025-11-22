@@ -592,6 +592,10 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
             if (!outfitType) {
                 outfitType = std::make_shared<OutfitType>();
             }
+            // Write properties (for outfits, usually just 0xFF if no properties)
+            uint8_t lastFlag = 0xFF;
+            outFile.write(reinterpret_cast<const char*>(&lastFlag), sizeof(lastFlag));
+            // Write texture patterns
             writeThingTypePatterns(outFile, outfitType);
         }
 
@@ -601,6 +605,11 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
             if (!effectType) {
                 effectType = std::make_shared<EffectType>();
             }
+            // Write properties (for effects, usually just 0xFF if no properties)
+            // TODO: Handle TOP_EFFECT flag (0x23) if effectType->topEffect is true
+            uint8_t lastFlag = 0xFF;
+            outFile.write(reinterpret_cast<const char*>(&lastFlag), sizeof(lastFlag));
+            // Write texture patterns
             writeThingTypePatterns(outFile, effectType);
         }
 
@@ -610,6 +619,10 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
             if (!missileType) {
                 missileType = std::make_shared<MissileType>();
             }
+            // Write properties (for missiles, usually just 0xFF if no properties)
+            uint8_t lastFlag = 0xFF;
+            outFile.write(reinterpret_cast<const char*>(&lastFlag), sizeof(lastFlag));
+            // Write texture patterns
             writeThingTypePatterns(outFile, missileType);
         }
         
@@ -959,8 +972,30 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
         }
 
         // Load outfits (starting from ID 1)
+        // ObjectBuilder loops from minID to maxID (inclusive): for (id = minID; id <= maxID; id++)
+        // For outfits: minID = 1, maxID = outfitCount
+        // So we load outfits with IDs 1 through outfitCount (inclusive)
         for (uint32_t id = 1; id <= outfitCount; ++id) {
             auto outfitType = std::make_shared<OutfitType>();
+            outfitType->category = ThingCategory::OUTFIT;
+            
+            // Read properties (for outfits/effects/missiles, this is usually just 0xFF if no properties)
+            // But we still need to read it to advance the file pointer
+            uint8_t flag;
+            while (true) {
+                inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
+                if (!inFile.good() || inFile.eof()) {
+                    Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading outfit properties at ID " + std::to_string(id));
+                    break;
+                }
+                if (flag == 0xFF) { // LAST_FLAG
+                    break;
+                }
+                // For now, we don't handle outfit-specific properties, just skip any data
+                // In the future, we might need to handle outfit properties here
+            }
+            
+            // Read texture patterns
             loadThingTypePatterns(inFile, outfitType);
             Outfits::pushOutfitType(outfitType);
         }
@@ -968,6 +1003,27 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
         // Load effects (starting from ID 1)
         for (uint32_t id = 1; id <= effectCount; ++id) {
             auto effectType = std::make_shared<EffectType>();
+            effectType->category = ThingCategory::EFFECT;
+            
+            // Read properties
+            uint8_t flag;
+            while (true) {
+                inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
+                if (!inFile.good() || inFile.eof()) {
+                    Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading effect properties at ID " + std::to_string(id));
+                    break;
+                }
+                if (flag == 0xFF) { // LAST_FLAG
+                    break;
+                }
+                // Handle effect-specific properties if needed
+                // For now, effects might have TOP_EFFECT flag (0x23 in MetadataFlags6)
+                if (flag == 0x23) { // TOP_EFFECT
+                    // effectType->topEffect = true; // If we add this property later
+                }
+            }
+            
+            // Read texture patterns
             loadThingTypePatterns(inFile, effectType);
             Effects::pushEffectType(effectType);
         }
@@ -975,6 +1031,23 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
         // Load missiles (starting from ID 1)
         for (uint32_t id = 1; id <= missileCount; ++id) {
             auto missileType = std::make_shared<MissileType>();
+            missileType->category = ThingCategory::MISSILE;
+            
+            // Read properties
+            uint8_t flag;
+            while (true) {
+                inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
+                if (!inFile.good() || inFile.eof()) {
+                    Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading missile properties at ID " + std::to_string(id));
+                    break;
+                }
+                if (flag == 0xFF) { // LAST_FLAG
+                    break;
+                }
+                // Missiles typically don't have properties, but we handle it just in case
+            }
+            
+            // Read texture patterns
             loadThingTypePatterns(inFile, missileType);
             Missiles::pushMissileType(missileType);
         }
@@ -1086,9 +1159,23 @@ void AssetsManager::setTextureIdFromThingType(std::shared_ptr<ThingType> thingTy
     }
 }
 
+std::vector<std::shared_ptr<sf::Texture>>& AssetsManager::getPreviewTexturesVector(ThingCategory category) {
+    switch(category) {
+        case ThingCategory::ITEM:
+            return previewTexturesItems;
+        case ThingCategory::OUTFIT:
+            return previewTexturesOutfits;
+        case ThingCategory::EFFECT:
+            return previewTexturesEffects;
+        case ThingCategory::MISSILE:
+            return previewTexturesMissiles;
+        default:
+            return previewTexturesItems;
+    }
+}
+
 std::shared_ptr<sf::Texture> AssetsManager::getPreviewTexture(int thingTypeId, ThingCategory category) {
-    // For now, use a single preview texture vector for all categories
-    // TODO: Separate preview textures per category if needed
+    auto& previewTextures = getPreviewTexturesVector(category);
     if(thingTypeId < previewTextures.size() && previewTextures.at(thingTypeId)) {
         return previewTextures[thingTypeId];
     }
@@ -1096,8 +1183,12 @@ std::shared_ptr<sf::Texture> AssetsManager::getPreviewTexture(int thingTypeId, T
 }
 
 void AssetsManager::replacePreviewTexture(int thingTypeId, std::shared_ptr<sf::Texture> texture, ThingCategory category) {
-    if(thingTypeId < 0 || thingTypeId >= previewTextures.size()) {
+    auto& previewTextures = getPreviewTexturesVector(category);
+    if(thingTypeId < 0) {
         return;
+    }
+    if(thingTypeId >= previewTextures.size()) {
+        previewTextures.resize(thingTypeId + 1);
     }
     previewTextures[thingTypeId] = texture;
 }
@@ -1124,6 +1215,8 @@ void AssetsManager::createPreviewTexture(int id, ThingCategory category) {
             if (isValid) thingType = Missiles::getMissileType(id);
             break;
     }
+    
+    auto& previewTextures = getPreviewTexturesVector(category);
     
     if (!isValid || !thingType || thingType->width == 0 || thingType->height == 0) {
         if (id >= previewTextures.size()) {
@@ -1194,6 +1287,8 @@ void AssetsManager::createPreviewTexturesForPage(int pageFirstThingType, int pag
                 break;
         }
         
+        auto& previewTextures = getPreviewTexturesVector(category);
+        
         if (!isValid || !thingType || thingType->width == 0 || thingType->height == 0) {
             if (id >= previewTextures.size()) {
                 previewTextures.resize(id + 1);
@@ -1215,8 +1310,14 @@ void AssetsManager::createPreviewTexturesForPage(int pageFirstThingType, int pag
 }
 
 void AssetsManager::clearPreviewTextures() {
-    previewTextures.clear();
-    previewTextures.shrink_to_fit();
+    previewTexturesItems.clear();
+    previewTexturesOutfits.clear();
+    previewTexturesEffects.clear();
+    previewTexturesMissiles.clear();
+    previewTexturesItems.shrink_to_fit();
+    previewTexturesOutfits.shrink_to_fit();
+    previewTexturesEffects.shrink_to_fit();
+    previewTexturesMissiles.shrink_to_fit();
 }
 
 sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category) {

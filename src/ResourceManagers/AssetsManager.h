@@ -362,7 +362,14 @@ private:
     GUIHelper* guiHelper;
 
     std::vector<std::shared_ptr<sf::Texture>> textures;
-    std::vector<std::shared_ptr<sf::Texture>> previewTextures = std::vector<std::shared_ptr<sf::Texture>>();
+    // Separate preview texture storage for each category
+    std::vector<std::shared_ptr<sf::Texture>> previewTexturesItems;
+    std::vector<std::shared_ptr<sf::Texture>> previewTexturesOutfits;
+    std::vector<std::shared_ptr<sf::Texture>> previewTexturesEffects;
+    std::vector<std::shared_ptr<sf::Texture>> previewTexturesMissiles;
+    
+    // Helper to get the correct preview texture vector for a category
+    std::vector<std::shared_ptr<sf::Texture>>& getPreviewTexturesVector(ThingCategory category);
 
     // To know the current animation frame slider's value
     int animationFrameSetting = 1;
