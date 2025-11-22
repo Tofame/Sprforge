@@ -346,13 +346,27 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 ImGui::SetCursorPosY(oldPos.y + groupSize.y/2 + 10);
 
                 if (ImGui::BeginTable("OutfitTextureProperties", 3, ImGuiTableFlags_SizingFixedFit)) {
+                    // Set up columns
                     ImGui::TableSetupColumn("Column 1", ImGuiTableColumnFlags_WidthFixed, (groupSize.x/2));
                     ImGui::TableSetupColumn("Column 2", ImGuiTableColumnFlags_WidthFixed, (groupSize.x/4));
                     ImGui::TableSetupColumn("Column 3", ImGuiTableColumnFlags_WidthFixed, groupSize.x/4);
                     ImGui::TableNextColumn();
+
                     ImGui::TableNextColumn();
                     ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Width:"); ImGui::Text("Height:"); ImGui::Text("Layers:"); ImGui::Text("Pattern X:"); ImGui::Text("Pattern Y:"); ImGui::Text("Pattern Z:"); ImGui::Text("Animations:");
+                    ImGui::Text("Width:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Height:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Layers:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Pattern X:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Pattern Y:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Pattern Z:");
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::Text("Animations:");
 
                     ImGui::TableNextColumn();
                     ImGui::PushItemWidth(groupSize.x * 0.20);
@@ -362,31 +376,37 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                         width = std::clamp(width, 1, ConfigManager::getInstance()->getItemMaxWidth());
                         unsavedOutfitType->setWidth(width);
                     }
+
                     int height = unsavedOutfitType->height;
                     if (ImGui::InputInt("##Height", &height, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         height = std::clamp(height, 1, ConfigManager::getInstance()->getItemMaxHeight());
                         unsavedOutfitType->setHeight(height);
                     }
+
                     int layers = unsavedOutfitType->layers;
                     if (ImGui::InputInt("##Layers", &layers, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         layers = std::clamp(layers, 1, 10);
                         unsavedOutfitType->setLayers(layers);
                     }
+
                     int patternX = unsavedOutfitType->patternX;
                     if (ImGui::InputInt("##PatternX", &patternX, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         patternX = std::clamp(patternX, 1, 10);
                         unsavedOutfitType->setPatternX(patternX);
                     }
+
                     int patternY = unsavedOutfitType->patternY;
                     if (ImGui::InputInt("##PatternY", &patternY, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         patternY = std::clamp(patternY, 1, 10);
                         unsavedOutfitType->setPatternY(patternY);
                     }
+
                     int patternZ = unsavedOutfitType->patternZ;
                     if (ImGui::InputInt("##PatternZ", &patternZ, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         patternZ = std::clamp(patternZ, 1, 10);
                         unsavedOutfitType->setPatternZ(patternZ);
                     }
+
                     int animations = unsavedOutfitType->animationsFrames;
                     if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         animations = std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
