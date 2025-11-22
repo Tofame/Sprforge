@@ -19,6 +19,7 @@ void ConfigManager::loadConfig(const std::string &filename) {
         BUTTONS_SPRITEPAGE = std::max(1, guiConfig["buttonsPerSpritePage"].value_or(1));
         GRID_COLOR = guiConfig["gridColor"].value_or("#892ce6");
         SELECTED_THING_COLOR = guiConfig["selectedThingColor"].value_or("#FF6347");
+        ANIMATION_FRAME_TIME = std::max(0.01f, guiConfig["animationFrameTime"].value_or(0.4f));
 
         auto itemPropertiesConfig = config["ITEMPROPERTIES"];
         ITEM_MAXWIDTH = std::max(1, itemPropertiesConfig["maxWidth"].value_or(1));

@@ -30,6 +30,8 @@ void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
     // Set slider to 1
     // If we go from item that e.g. had 3 animations, to the item that has less than that ...
     assetsManager->setAnimationFrameSetting(1);
+    // Stop animation when selecting a different item
+    isAnimationPlaying = false;
     // To know what we selected most recently
     assetsManager->setLastSelectedItemId(id);
 
@@ -473,8 +475,48 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 ImGui::SameLine();
                 float width = ImGui::GetContentRegionAvail().x * 0.15f;
                 ImGui::PushItemWidth(width);
+                int previousFrame = assetsManager->getAnimationFrameSetting();
                 ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, previewIt->animationsFrames);
+                // Stop animation if user manually changes the slider
+                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+                    isAnimationPlaying = false;
+                }
                 ImGui::PopItemWidth();
+
+                // Play/Pause Animation Button
+                ImGui::SameLine();
+                const char* playButtonLabel = isAnimationPlaying ? "||" : ">";
+                bool canAnimate = previewIt->animationsFrames > 1;
+                if (!canAnimate) {
+                    isAnimationPlaying = false; // Stop if item has only 1 frame
+                }
+                if (ImGui::Button(playButtonLabel, ImVec2(30, 0))) {
+                    if (canAnimate) {
+                        isAnimationPlaying = !isAnimationPlaying;
+                        if (isAnimationPlaying) {
+                            animationClock.restart();
+                        }
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
+                }
+
+                // Animation loop logic
+                if (isAnimationPlaying && canAnimate) {
+                    float elapsed = animationClock.getElapsedTime().asSeconds();
+                    if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
+                        // Advance to next frame
+                        int currentFrame = assetsManager->getAnimationFrameSetting();
+                        int nextFrame = currentFrame + 1;
+                        // Loop using modulo: frame 1 to animationsFrames, then back to 1
+                        if (nextFrame > previewIt->animationsFrames) {
+                            nextFrame = 1;
+                        }
+                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        animationClock.restart();
+                    }
+                }
 
                 //ImVec2 gridPos = ImGui::GetItemRectMin(); // ImGui::GetItemRectMin()
                 ImVec2 gridTotalSize = ImVec2(spriteMaxSize * previewIt->width, spriteMaxSize * previewIt->height);
@@ -592,8 +634,13 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 ImGui::EndGroup();
             } else {
                 ImGui::Text("No texture selected");
+                // Stop animation if no item is selected
+                isAnimationPlaying = false;
             }
             ImGui::EndTabItem();
+        } else {
+            // Stop animation when not on texture tab
+            isAnimationPlaying = false;
         }
 
         // --- Item Info Tab ---

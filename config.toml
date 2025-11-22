@@ -6,12 +6,14 @@ buttonsPerItemPage = 100
 buttonsPerSpritePage = 100
 gridColor = "#892ce6" # color of the grid drawn in e.g. item
 selectedThingColor = "#FF6347" # color of selected item/sprite
+animationFrameTime = 0.4 # time per animation frame in seconds (400ms)
 
 [ITEMPROPERTIES]
 # Import of an item with e.g. width exceeding the below setting, will be forced.
-maxWidth = 6
-maxHeight = 6
-maxAnimationCount = 6
+# These values are limited by uint8_t (0-255), but practical limits are lower I think
+maxWidth = 255
+maxHeight = 255
+maxAnimationCount = 255
 
 [COMPILE]
 assetsFileName = "Tibia.spr" # Fallback name of compilled .assets to be called, if none provided in the popup
