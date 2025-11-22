@@ -245,7 +245,10 @@ namespace Tools {
                 imageRemoveMagenta(image);
             }
 
-            texture->loadFromImage(image);
+            if (!texture->loadFromImage(image)) {
+                CloseClipboard();
+                return false;
+            }
             CloseClipboard();
             return true;
         }

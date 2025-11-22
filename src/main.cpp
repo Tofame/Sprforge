@@ -34,7 +34,9 @@ int main() {
     RegisterDragDrop(hwnd, &dropManager);
 
     // Initialize ImGui-SFML
-    ImGui::SFML::Init(window);
+    if (!ImGui::SFML::Init(window)) {
+        return 1; // Failed to initialize ImGui-SFML
+    }
     window.resetGLStates();
 
     auto guiHelper = new GUIHelper();

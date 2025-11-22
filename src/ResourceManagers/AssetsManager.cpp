@@ -379,11 +379,11 @@ void AssetsManager::createNewTexture() {
 
 ImTextureID AssetsManager::getImGuiTexture(int id) {
     if(!isValidTextureIndex(id)) {
-        return (ImTextureID)BLANK_TEXTURE->getNativeHandle();
+        return (ImTextureID)(uintptr_t)BLANK_TEXTURE->getNativeHandle();
     }
 
     auto texture = textures.at(id);
-    return (ImTextureID)texture->getNativeHandle();
+    return (ImTextureID)(uintptr_t)texture->getNativeHandle();
 }
 
 void AssetsManager::exportTexture(const std::string& outputString, const int textureId) {

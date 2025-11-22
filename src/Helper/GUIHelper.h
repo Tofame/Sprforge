@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <iostream>
+#include <cstdint>
 #include "SFML/Graphics/Texture.hpp"
 #include "imgui.h"
 
@@ -24,7 +25,7 @@ public:
         auto it = guiTextures.find(name);
         if (it != guiTextures.end()) {
             auto texture = it->second;
-            return (ImTextureID)texture->getNativeHandle(); // Return the pointer to the texture if found
+            return (ImTextureID)(uintptr_t)texture->getNativeHandle(); // Return the pointer to the texture if found
         }
 
         throw std::runtime_error("[GUIHelper::getTexture()] Cannot load a texture called: " + name);

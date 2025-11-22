@@ -126,7 +126,7 @@ void ItemsScrollableWindow::drawItemTypeList(sf::Clock& deltaClock) {
         if (ImGui::ImageButton
         (
             "##ItemTypeButton",
-            (ImTextureID) texture->getNativeHandle(),
+            (ImTextureID)(uintptr_t)texture->getNativeHandle(),
             ConfigManager::getInstance()->getItemButtonSize(),
             ImVec2(0, 0), ImVec2(1, 1)
         ))
@@ -433,7 +433,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
                                 // Use ImGui::SetCursorPos and draw the image
                                 ImGui::SetCursorPos(tempPos);
-                                ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
 
                                 if (ImGui::IsItemHovered()) {
                                     ImGui::SetTooltip("Sprite: %d\nPos: w=%d, h=%d, l=%d\nIndex: %d", spriteIndex, w, h, l, 

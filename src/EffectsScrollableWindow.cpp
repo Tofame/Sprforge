@@ -73,7 +73,7 @@ void EffectsScrollableWindow::drawEffectTypeList(sf::Clock& deltaClock) {
         bool isSelected = (i == getSelectedButtonIndex());
         auto texture = assetsManager->getPreviewTexture(i, ThingCategory::EFFECT);
         ImGui::PushID(i);
-        if (ImGui::ImageButton("##EffectTypeButton", (ImTextureID) texture->getNativeHandle(),
+        if (ImGui::ImageButton("##EffectTypeButton", (ImTextureID)(uintptr_t)texture->getNativeHandle(),
             ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
             selectEffect(i, false);
         }
@@ -137,7 +137,7 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                                 tempPos.x += std::floor((float)(unsavedEffectType->width - w - 1) * spriteMaxSize);
                                 tempPos.y += std::floor((float)(unsavedEffectType->height - h - 1) * spriteMaxSize);
                                 ImGui::SetCursorPos(tempPos);
-                                ImGui::Image((ImTextureID)texture->getNativeHandle(), previewSize);
+                                ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
                                 if (ImGui::BeginDragDropTarget()) {
                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                         int newTextureId = *(int *) payload->Data;
