@@ -30,6 +30,7 @@ public:
     [[nodiscard]] int getItemMaxWidth() const { return ITEM_MAXWIDTH; };
     [[nodiscard]] int getItemMaxHeight() const { return ITEM_MAXHEIGHT; };
     [[nodiscard]] int getItemMaxAnimationCount() const { return ITEM_MAXANIMATIONS; };
+    [[nodiscard]] float getAnimationFrameTime() const { return ANIMATION_FRAME_TIME; };
 
     [[nodiscard]] const std::string& getAssetsFileName() const { return FILE_ASSETS_NAME; }
     [[nodiscard]] const std::string& getDatFileName() const { return FILE_ITEMS_NAME; }
@@ -56,6 +57,7 @@ private:
     int ITEM_MAXWIDTH;
     int ITEM_MAXHEIGHT;
     int ITEM_MAXANIMATIONS;
+    float ANIMATION_FRAME_TIME;
 
     std::string FILE_ASSETS_NAME;
     std::string FILE_ITEMS_NAME;

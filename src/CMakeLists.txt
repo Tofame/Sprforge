@@ -29,6 +29,12 @@ add_executable(Sprforge main.cpp
         Things/Missiles.h
         ItemsScrollableWindow.h
         ItemsScrollableWindow.cpp
+        OutfitsScrollableWindow.h
+        OutfitsScrollableWindow.cpp
+        EffectsScrollableWindow.h
+        EffectsScrollableWindow.cpp
+        MissilesScrollableWindow.h
+        MissilesScrollableWindow.cpp
         ResourceManagers/ConfigManager.cpp
         ResourceManagers/ConfigManager.h
         Misc/Warninger.h

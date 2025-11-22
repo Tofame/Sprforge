@@ -183,6 +183,10 @@ private:
 
     bool shouldOpenUnsavedPopup = false; // for "Save" changed itemType popup
 
+    // Animation playback
+    bool isAnimationPlaying = false;
+    sf::Clock animationClock;
+
     // Variables for export
     std::string outputFolder = Tools::getDesktopPath();
     int exportFormatSelected = 0; // 0 = PNG, 1 = BMP, 2 = JPG, 3 = ITF, 4 = TOML
