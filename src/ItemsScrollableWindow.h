@@ -61,7 +61,15 @@ public:
             return;
         }
 
-        setCurrentPage(id / ConfigManager::getInstance()->getButtonsCountItemPage());
+        int oldPage = getCurrentPage();
+        int newPage = id / ConfigManager::getInstance()->getButtonsCountItemPage();
+        setCurrentPage(newPage);
+        
+        // If page changed, trigger preview generation
+        // Don't auto-select first item since we're already selecting a specific item
+        if (oldPage != newPage) {
+            onPageChanged(oldPage, newPage, false);
+        }
 
         if(goToSelect) {
             scrollToButtonIndex = id;
@@ -114,7 +122,7 @@ public:
 
         return true;
     }
-    void onPageChanged(int oldPage, int newPage) {
+    void onPageChanged(int oldPage, int newPage, bool autoSelectFirst = true) {
         if(oldPage == newPage) {
             return;
         }
@@ -122,7 +130,11 @@ public:
         // Load preview textures for current page
         assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex());
 
-        selectItem(getPageFirstIndex());
+        // Only auto-select first item if requested (e.g., from page navigation buttons)
+        // Don't auto-select when called from search box (we already have a selected item)
+        if (autoSelectFirst) {
+            selectItem(getPageFirstIndex());
+        }
     }
 
     void exportItem(Tools::EXPORT_OPTIONS option) {

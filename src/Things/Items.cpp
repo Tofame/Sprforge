@@ -72,7 +72,7 @@ void Items::exportItemToml(const std::string& filePath, int itemId) {    // Seri
     // Create a TOML table
     toml::table itemData;
     itemData.insert("id", itemId);
-    itemData.insert("category", static_cast<int>(itemType.category));
+    itemData.insert("category", static_cast<int>(itemType.itemCategory));
 
     itemData.insert("isGround", itemType.hasFlag(IS_GROUND));
     itemData.insert("speed", itemType.speed);
@@ -128,7 +128,7 @@ bool Items::importItemToml(const std::string& filePath) {
     ItemType& itemType = *itemTypePtr;
 
     // Assign values from TOML
-    itemType.category = static_cast<ItemCategory_t>(itemData["category"].value_or(0));
+    itemType.itemCategory = static_cast<ItemCategory_t>(itemData["category"].value_or(0));
 
     itemType.setFlag(IS_GROUND, itemData["isGround"].value_or(false));
     itemType.speed = itemData["speed"].value_or(0);
@@ -176,7 +176,7 @@ bool Items::importItemItf(const std::string &filePath) {
 
 void Items::serializeItemType(std::ostream &stream, const ItemType &itemType) {
     // Write primitive members
-    stream.write(reinterpret_cast<const char*>(&itemType.category), sizeof(itemType.category));
+    stream.write(reinterpret_cast<const char*>(&itemType.itemCategory), sizeof(itemType.itemCategory));
 
     auto flags = itemType.getAllFlags();
     stream.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
@@ -200,7 +200,7 @@ void Items::serializeItemType(std::ostream &stream, const ItemType &itemType) {
 
 void Items::deserializeItemType(std::istream& stream, ItemType& itemType) {
     // Read primitive data members
-    stream.read(reinterpret_cast<char*>(&itemType.category), sizeof(itemType.category));
+    stream.read(reinterpret_cast<char*>(&itemType.itemCategory), sizeof(itemType.itemCategory));
 
     auto flags = itemType.getAllFlags();
     stream.read(reinterpret_cast<char*>(&flags), sizeof(flags));
