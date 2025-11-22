@@ -59,31 +59,11 @@ if(APPLE)
         "-framework Foundation"
     )
     
-    # Set Objective-C++ standard for files that include Objective-C++ code
-    set_target_properties(Sprforge PROPERTIES
-        OBJCXX_STANDARD 17
-        OBJCXX_STANDARD_REQUIRED ON
-    )
-    
-    # Enable Objective-C++ for source files that include tools.h
-    # Since tools.h contains Objective-C++ code, we need to compile C++ files as Objective-C++
-    set_source_files_properties(
-        main.cpp
-        SpritesScrollableWindow.cpp
-        ItemsScrollableWindow.cpp
-        OutfitsScrollableWindow.cpp
-        EffectsScrollableWindow.cpp
-        MissilesScrollableWindow.cpp
-        ResourceManagers/AssetsManager.cpp
-        ResourceManagers/ConfigManager.cpp
-        Helper/GUIHelper.cpp
-        Helper/SavedData.cpp
-        Things/Item.cpp
-        Things/Thing.cpp
-        Things/ThingType.cpp
-        Things/ItemType.cpp
-        Things/Items.cpp
-        PROPERTIES COMPILE_FLAGS "-x objective-c++"
+    # Enable Objective-C++ compilation for C++ files that include tools.h
+    # Since tools.h contains Objective-C++ code (@autoreleasepool, Cocoa APIs),
+    # we need to tell the compiler to treat C++ files as Objective-C++ on macOS
+    target_compile_options(Sprforge PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>
     )
 endif()
 

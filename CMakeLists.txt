@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
-project(SprForge)
+cmake_minimum_required(VERSION 3.10)
+project(SprForge LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
