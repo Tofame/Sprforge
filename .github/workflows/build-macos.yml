@@ -25,10 +25,7 @@ jobs:
 
       - name: Install Homebrew dependencies
         run: |
-          # Install CMake if not already present
-          if ! command -v cmake &> /dev/null; then
-            brew install cmake
-          fi
+          brew install cmake pkg-config
 
       - name: Verify nativefiledialog-extended
         run: |
@@ -46,7 +43,11 @@ jobs:
             -DCMAKE_C_COMPILER=/usr/bin/clang \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
             -DCMAKE_OBJC_COMPILER=/usr/bin/clang \
-            -DCMAKE_OBJCXX_COMPILER=/usr/bin/clang++
+            -DCMAKE_OBJCXX_COMPILER=/usr/bin/clang++ \
+            -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 \
+            -DCMAKE_OSX_SYSROOT=$(xcrun --sdk macosx --show-sdk-path) \
+            -DCMAKE_C_FLAGS="-fobjc-arc" \
+            -DCMAKE_CXX_FLAGS="-fobjc-arc"
 
       - name: Build
         run: |
