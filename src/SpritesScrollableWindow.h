@@ -113,6 +113,10 @@ public:
     void setDropManager(DropManager* _dm) {
         this->dropManager = _dm;
     }
+    
+    DropManager* getDropManager() const {
+        return dropManager;
+    }
 private:
     sf::RenderWindow& window;
     AssetsManager* assetsManager;

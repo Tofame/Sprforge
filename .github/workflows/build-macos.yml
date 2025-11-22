@@ -1,0 +1,52 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: true
+        default: 'main'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Install dependencies
+        run: |
+          # Install CMake if not already present (usually pre-installed on macOS runners)
+          if ! command -v cmake &> /dev/null; then
+            brew install cmake
+          fi
+          # Note: nativefiledialog-extended should be in dependencies/ folder
+          # If missing, download it (see README.md for instructions)
+
+      - name: Verify nativefiledialog-extended
+        run: |
+          if [ ! -d "dependencies/nativefiledialog-extended" ]; then
+            echo "Error: nativefiledialog-extended not found in dependencies/"
+            echo "Please download it from https://github.com/btzy/nativefiledialog-extended/releases"
+            echo "And place it in dependencies/nativefiledialog-extended/"
+            exit 1
+          fi
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release -j $(sysctl -n hw.ncpu)
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS-Build
+          path: build/src/Sprforge
+          if-no-files-found: warn

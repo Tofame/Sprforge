@@ -21,17 +21,24 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
 void copyToClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindow, ItemsScrollableWindow* itemsWindow);
 
 int main() {
+#ifdef _WIN32
+    // Initialize Windows COM for drag-and-drop
     HRESULT hr = OleInitialize(NULL);
+#endif
 
     // Create a single application window
     sf::RenderWindow window(sf::VideoMode({1100, 800}), "Sprforge");
     window.setFramerateLimit(60);
 
-    // Setup and register your DropManager here
-    DropManager dropManager;
-    HWND hwnd = static_cast<HWND>(window.getNativeHandle());
-    dropManager.SetWindowHandle(hwnd);
-    RegisterDragDrop(hwnd, &dropManager);
+    // Setup platform-specific DropManager
+#ifdef _WIN32
+    DropManagerWindows dropManager;
+    void* nativeHandle = window.getNativeHandle();
+    dropManager.Initialize(nativeHandle);
+#else
+    DropManagerSFML dropManager;
+    dropManager.Initialize(window.getNativeHandle());
+#endif
 
     // Initialize ImGui-SFML
     if (!ImGui::SFML::Init(window)) {
@@ -70,6 +77,18 @@ int main() {
                     window.close();
                 }
             }
+#ifndef _WIN32
+            // Handle file drops on macOS/Linux using SFML events
+            else if (const auto* fileDropEvent = event.getIf<sf::Event::FilesDropped>()) {
+                std::vector<std::string> filePaths;
+                for (const auto& path : fileDropEvent->paths) {
+                    filePaths.push_back(path);
+                }
+                dropManager.HandleFileDrop(filePaths);
+                // Note: Files are processed in SpritesScrollableWindow when IsDraggingFiles() is checked
+                // The drag state will be cleared after files are processed
+            }
+#endif
             else if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
                 // Prevents crash that sometimes happened when ImGui/SFML tried to process weird keys
                 if (keyEvent->code <= sf::Keyboard::Key::Unknown) {
@@ -77,10 +96,18 @@ int main() {
                 }
 
                 // Hotkey logic: Ctrl+C (Copy); Ctrl+V (Paste)
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) && keyEvent->scancode == sf::Keyboard::Scan::V) {
+                // On macOS, Cmd+C and Cmd+V are typically used, but SFML maps them to Control
+#ifdef _WIN32
+                bool isModifierPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl);
+#else
+                // On macOS, check for both Cmd and Ctrl
+                bool isModifierPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LSystem) ||
+                                         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl);
+#endif
+                if (isModifierPressed && keyEvent->scancode == sf::Keyboard::Scan::V) {
                     pasteFromClipboard(assetsManager, &spritesScrollableWindow, &itemsScrollableWindow);
                 }
-                else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) && keyEvent->scancode == sf::Keyboard::Scan::C) {
+                else if (isModifierPressed && keyEvent->scancode == sf::Keyboard::Scan::C) {
                     copyToClipboard(assetsManager, &spritesScrollableWindow, &itemsScrollableWindow);
                 }
             }
@@ -88,6 +115,9 @@ int main() {
 
         // Update ImGui-SFML
         ImGui::SFML::Update(window, deltaClock.restart());
+
+        // Update drop manager
+        dropManager.Update(window);
 
         // For showing demo window
         //ImGui::ShowDemoWindow();
@@ -196,8 +226,12 @@ int main() {
 
     ImGui::SFML::Shutdown();
 
-    RevokeDragDrop(hwnd);
+    // Shutdown drop manager
+    dropManager.Shutdown();
+
+#ifdef _WIN32
     OleUninitialize();
+#endif
 
     return 0;
 }
@@ -240,7 +274,16 @@ void displayExitConfirmation(sf::RenderWindow& window, bool& showExitConfirmatio
 void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindow, ItemsScrollableWindow* itemsWindow) {
     auto selectedCategory = am->getLastSelectedCategory();
 
-    if(selectedCategory == CATEGORY_SPRITES && IsClipboardFormatAvailable(CF_BITMAP)) {
+#ifdef _WIN32
+    bool hasBitmap = IsClipboardFormatAvailable(CF_BITMAP);
+    bool hasItemType = IsClipboardFormatAvailable(RegisterClipboardFormat("ItemTypeBinary"));
+#else
+    // On macOS, we check if clipboard has image data
+    bool hasBitmap = Tools::hasImageInClipboard();
+    bool hasItemType = Tools::hasItemTypeInClipboard();
+#endif
+
+    if(selectedCategory == CATEGORY_SPRITES && hasBitmap) {
         auto pastedTexture = std::make_shared<sf::Texture>();
         if (Tools::pasteTextureFromClipboard(pastedTexture)) {
             auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
@@ -258,7 +301,7 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
         } else {
             Warninger::sendWarning(FUNC_NAME, "Unable to paste Texture from clipboard");
         }
-    } else if(selectedCategory == CATEGORY_ITEMS && IsClipboardFormatAvailable(RegisterClipboardFormat("ItemTypeBinary"))) {
+    } else if(selectedCategory == CATEGORY_ITEMS && hasItemType) {
         auto pastedItem = std::make_shared<ItemType>();
         if (Tools::pasteItemTypeFromClipboard(*pastedItem)) {
             // Logic to replace the item with the pasted one
