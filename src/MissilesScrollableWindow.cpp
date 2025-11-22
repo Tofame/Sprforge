@@ -5,6 +5,15 @@
 MissilesScrollableWindow::MissilesScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
 : window(window), assetsManager(am)
 {
+    uiStateManager = am->getUIStateManager();
+    previewManager = am->getPreviewManager();
+    textureManager = am->getTextureManager();
+    idInputBuffer[0] = '\0';
+}
+
+MissilesScrollableWindow::MissilesScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am)
+: window(window), uiStateManager(uiState), previewManager(preview), textureManager(texture), assetsManager(am)
+{
     idInputBuffer[0] = '\0';
 }
 
@@ -14,7 +23,7 @@ void MissilesScrollableWindow::selectMissile(int id, bool goToSelect) {
         Warninger::sendWarning(FUNC_NAME, "MissileType that we try to select doesn't exist (" + std::to_string(id) + ")");
         return;
     }
-    assetsManager->setAnimationFrameSetting(1);
+    uiStateManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different missile
     isAnimationPlaying = false;
     if(goToSelect) scrollToButtonIndex = id;
@@ -65,13 +74,13 @@ void MissilesScrollableWindow::drawMissileTypeList(sf::Clock& deltaClock) {
     // Create preview textures for current page if needed
     static int lastMissilePage = -1;
     if (getCurrentPage() != lastMissilePage) {
-        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::MISSILE);
+        previewManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::MISSILE);
         lastMissilePage = getCurrentPage();
     }
     
     for (int i = startIndex; i < endIndex && i < (int)Missiles::getMissileTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
-        auto texture = assetsManager->getPreviewTexture(i, ThingCategory::MISSILE);
+        auto texture = previewManager->getPreviewTexture(i, ThingCategory::MISSILE);
         ImGui::PushID(i);
         if (ImGui::ImageButton("##MissileTypeButton", (ImTextureID) texture->getNativeHandle(),
             ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
@@ -178,8 +187,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                                 for (int l = 0; l < unsavedMissileType->layers; l++) {
                                     for(int w = 0; w < unsavedMissileType->width; w++) {
                                         for(int h = 0; h < unsavedMissileType->height; h++) {
-                                            int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedMissileType, w, h, assetsManager->getAnimationFrameSetting(), l, cell.patternX, cell.patternY, 0);
-                                            auto texture = assetsManager->getTexture(spriteIndex);
+                                            int spriteIndex = ThingTypeHelper::getTextureIdFromThingType(unsavedMissileType, w, h, uiStateManager->getAnimationFrameSetting(), l, cell.patternX, cell.patternY, 0);
+                                            auto texture = textureManager->getTexture(spriteIndex);
                                             if (texture) {
                                                 ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
                                                 ImVec2 tempPos = cellMin;
@@ -191,8 +200,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                                                 if (ImGui::BeginDragDropTarget()) {
                                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                                         int newTextureId = *(int *) payload->Data;
-                                                        assetsManager->setTextureIdFromThingType(unsavedMissileType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, cell.patternX, cell.patternY, 0);
-                                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::MISSILE);
+                                                        ThingTypeHelper::setTextureIdFromThingType(unsavedMissileType, w, h, uiStateManager->getAnimationFrameSetting(), newTextureId, l, cell.patternX, cell.patternY, 0);
+                                                        previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::MISSILE);
                                                     }
                                                     ImGui::EndDragDropTarget();
                                                 }
@@ -219,8 +228,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                     for (int l = 0; l < unsavedMissileType->layers; l++) {
                         for(int w = 0; w < unsavedMissileType->width; w++) {
                             for(int h = 0; h < unsavedMissileType->height; h++) {
-                                int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedMissileType, w, h, assetsManager->getAnimationFrameSetting(), l, 0, 0, 0);
-                                auto texture = assetsManager->getTexture(spriteIndex);
+                                int spriteIndex = ThingTypeHelper::getTextureIdFromThingType(unsavedMissileType, w, h, uiStateManager->getAnimationFrameSetting(), l, 0, 0, 0);
+                                auto texture = textureManager->getTexture(spriteIndex);
                                 if (texture) {
                                     ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
                                     auto tempPos = centeredPos;
@@ -231,8 +240,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                                     if (ImGui::BeginDragDropTarget()) {
                                         if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                             int newTextureId = *(int *) payload->Data;
-                                            assetsManager->setTextureIdFromThingType(unsavedMissileType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
-                                            assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::MISSILE);
+                                            ThingTypeHelper::setTextureIdFromThingType(unsavedMissileType, w, h, uiStateManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
+                                            previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::MISSILE);
                                         }
                                         ImGui::EndDragDropTarget();
                                     }
@@ -250,10 +259,10 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                 ImGui::SameLine();
                 float width = ImGui::GetContentRegionAvail().x * 0.15f;
                 ImGui::PushItemWidth(width);
-                int previousFrame = assetsManager->getAnimationFrameSetting();
-                ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, unsavedMissileType->animationsFrames);
+                int previousFrame = uiStateManager->getAnimationFrameSetting();
+                ImGui::SliderInt("Animation Frame", &uiStateManager->getAnimationFrameSettingRef(), 1, unsavedMissileType->animationsFrames);
                 // Stop animation if user manually changes the slider
-                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+                if (uiStateManager->getAnimationFrameSetting() != previousFrame) {
                     isAnimationPlaying = false;
                 }
                 ImGui::PopItemWidth();
@@ -282,13 +291,13 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                     float elapsed = animationClock.getElapsedTime().asSeconds();
                     if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
                         // Advance to next frame
-                        int currentFrame = assetsManager->getAnimationFrameSetting();
+                        int currentFrame = uiStateManager->getAnimationFrameSetting();
                         int nextFrame = currentFrame + 1;
                         // Loop using modulo: frame 1 to animationsFrames, then back to 1
                         if (nextFrame > unsavedMissileType->animationsFrames) {
                             nextFrame = 1;
                         }
-                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        uiStateManager->setAnimationFrameSetting(nextFrame);
                         animationClock.restart();
                     }
                 }
@@ -367,8 +376,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                     if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         animations = std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
                         unsavedMissileType->setAnimationCount(animations);
-                        if(animations < assetsManager->getAnimationFrameSetting()) {
-                            assetsManager->setAnimationFrameSetting(animations);
+                        if(animations < uiStateManager->getAnimationFrameSetting()) {
+                            uiStateManager->setAnimationFrameSetting(animations);
                         }
                     }
                     ImGui::PopItemWidth();
@@ -390,8 +399,8 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
         if (ImGui::Button("Save Missile")) {
             if (unsavedMissileType && unsavedMissileTypeId >= 0) {
                 Missiles::replaceMissileType(unsavedMissileTypeId, std::make_shared<MissileType>(*unsavedMissileType));
-                assetsManager->createPreviewTexture(unsavedMissileTypeId, ThingCategory::MISSILE);
-                assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+                previewManager->createPreviewTexture(unsavedMissileTypeId, ThingCategory::MISSILE);
+                uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
             }
         }
     }
@@ -409,7 +418,7 @@ void MissilesScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("<< Page##MissileTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
         }
     }
     ImGui::SameLine();
@@ -429,20 +438,20 @@ void MissilesScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##MissileTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
         }
     }
     if (ImGui::Button("New Missile##NewMissileTypeFromList")) {
         int index = addMissileType();
         if (index >= 1) {
             selectMissile(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("Remove Missile##RemoveMissileTypeFromList")) {
         if(removeMissileType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
     ImGui::EndGroup();

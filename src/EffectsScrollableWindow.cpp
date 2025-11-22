@@ -5,6 +5,15 @@
 EffectsScrollableWindow::EffectsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
 : window(window), assetsManager(am)
 {
+    uiStateManager = am->getUIStateManager();
+    previewManager = am->getPreviewManager();
+    textureManager = am->getTextureManager();
+    idInputBuffer[0] = '\0';
+}
+
+EffectsScrollableWindow::EffectsScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am)
+: window(window), uiStateManager(uiState), previewManager(preview), textureManager(texture), assetsManager(am)
+{
     idInputBuffer[0] = '\0';
 }
 
@@ -14,7 +23,7 @@ void EffectsScrollableWindow::selectEffect(int id, bool goToSelect) {
         Warninger::sendWarning(FUNC_NAME, "EffectType that we try to select doesn't exist (" + std::to_string(id) + ")");
         return;
     }
-    assetsManager->setAnimationFrameSetting(1);
+    uiStateManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different effect
     isAnimationPlaying = false;
     if(goToSelect) scrollToButtonIndex = id;
@@ -65,13 +74,13 @@ void EffectsScrollableWindow::drawEffectTypeList(sf::Clock& deltaClock) {
     // Create preview textures for current page if needed
     static int lastEffectPage = -1;
     if (getCurrentPage() != lastEffectPage) {
-        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::EFFECT);
+        previewManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::EFFECT);
         lastEffectPage = getCurrentPage();
     }
     
     for (int i = startIndex; i < endIndex && i < (int)Effects::getEffectTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
-        auto texture = assetsManager->getPreviewTexture(i, ThingCategory::EFFECT);
+        auto texture = previewManager->getPreviewTexture(i, ThingCategory::EFFECT);
         ImGui::PushID(i);
         if (ImGui::ImageButton("##EffectTypeButton", (ImTextureID) texture->getNativeHandle(),
             ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
@@ -129,8 +138,8 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                 for (int l = 0; l < unsavedEffectType->layers; l++) {
                     for(int w = 0; w < unsavedEffectType->width; w++) {
                         for(int h = 0; h < unsavedEffectType->height; h++) {
-                            int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedEffectType, w, h, assetsManager->getAnimationFrameSetting(), l, 0, 0, 0);
-                            auto texture = assetsManager->getTexture(spriteIndex);
+                            int spriteIndex = ThingTypeHelper::getTextureIdFromThingType(unsavedEffectType, w, h, uiStateManager->getAnimationFrameSetting(), l, 0, 0, 0);
+                            auto texture = textureManager->getTexture(spriteIndex);
                             if (texture) {
                                 ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
                                 auto tempPos = centeredPos;
@@ -141,8 +150,8 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                                 if (ImGui::BeginDragDropTarget()) {
                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                         int newTextureId = *(int *) payload->Data;
-                                        assetsManager->setTextureIdFromThingType(unsavedEffectType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::EFFECT);
+                                        ThingTypeHelper::setTextureIdFromThingType(unsavedEffectType, w, h, uiStateManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
+                                        previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::EFFECT);
                                     }
                                     ImGui::EndDragDropTarget();
                                 }
@@ -159,10 +168,10 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                 ImGui::SameLine();
                 float width = ImGui::GetContentRegionAvail().x * 0.15f;
                 ImGui::PushItemWidth(width);
-                int previousFrame = assetsManager->getAnimationFrameSetting();
-                ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, unsavedEffectType->animationsFrames);
+                int previousFrame = uiStateManager->getAnimationFrameSetting();
+                ImGui::SliderInt("Animation Frame", &uiStateManager->getAnimationFrameSettingRef(), 1, unsavedEffectType->animationsFrames);
                 // Stop animation if user manually changes the slider
-                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+                if (uiStateManager->getAnimationFrameSetting() != previousFrame) {
                     isAnimationPlaying = false;
                 }
                 ImGui::PopItemWidth();
@@ -191,13 +200,13 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                     float elapsed = animationClock.getElapsedTime().asSeconds();
                     if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
                         // Advance to next frame
-                        int currentFrame = assetsManager->getAnimationFrameSetting();
+                        int currentFrame = uiStateManager->getAnimationFrameSetting();
                         int nextFrame = currentFrame + 1;
                         // Loop using modulo: frame 1 to animationsFrames, then back to 1
                         if (nextFrame > unsavedEffectType->animationsFrames) {
                             nextFrame = 1;
                         }
-                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        uiStateManager->setAnimationFrameSetting(nextFrame);
                         animationClock.restart();
                     }
                 }
@@ -259,8 +268,8 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                     if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         animations = std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
                         unsavedEffectType->setAnimationCount(animations);
-                        if(animations < assetsManager->getAnimationFrameSetting()) {
-                            assetsManager->setAnimationFrameSetting(animations);
+                        if(animations < uiStateManager->getAnimationFrameSetting()) {
+                            uiStateManager->setAnimationFrameSetting(animations);
                         }
                     }
                     ImGui::PopItemWidth();
@@ -282,8 +291,8 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
         if (ImGui::Button("Save Effect")) {
             if (unsavedEffectType && unsavedEffectTypeId >= 0) {
                 Effects::replaceEffectType(unsavedEffectTypeId, std::make_shared<EffectType>(*unsavedEffectType));
-                assetsManager->createPreviewTexture(unsavedEffectTypeId, ThingCategory::EFFECT);
-                assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+                previewManager->createPreviewTexture(unsavedEffectTypeId, ThingCategory::EFFECT);
+                uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
             }
         }
     }
@@ -301,7 +310,7 @@ void EffectsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("<< Page##EffectTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
         }
     }
     ImGui::SameLine();
@@ -321,20 +330,20 @@ void EffectsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##EffectTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
         }
     }
     if (ImGui::Button("New Effect##NewEffectTypeFromList")) {
         int index = addEffectType();
         if (index >= 1) {
             selectEffect(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("Remove Effect##RemoveEffectTypeFromList")) {
         if(removeEffectType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
     ImGui::EndGroup();

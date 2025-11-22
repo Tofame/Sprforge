@@ -8,20 +8,29 @@ SpritesScrollableWindow::SpritesScrollableWindow(sf::RenderWindow& window, Asset
 : window(window)
 {
     assetsManager = am;
+    uiStateManager = am->getUIStateManager();
+    textureManager = am->getTextureManager();
 
     // Clear search text field, there were weird '??' artifacts sometimes
     idInputBuffer[0] = '\0';
 }
 
+SpritesScrollableWindow::SpritesScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, TextureManager* texture, AssetsManager* am)
+: window(window), uiStateManager(uiState), textureManager(texture), assetsManager(am)
+{
+    // Clear search text field, there were weird '??' artifacts sometimes
+    idInputBuffer[0] = '\0';
+}
+
 void SpritesScrollableWindow::selectSprite(int id, bool goToSelect) {
-    assetsManager->setLastSelectedCategory(CATEGORY_SPRITES);
+    uiStateManager->setLastSelectedCategory(CATEGORY_SPRITES);
 
     // Already selected
     if(getSelectedSpriteIndex() >= 0 && id == getSelectedSpriteIndex()) {
         return;
     }
     // Texture that we selected doesn't exist
-    if(!assetsManager->isValidTextureIndex(id)) {
+    if(!textureManager->isValidTextureIndex(id)) {
         Warninger::sendWarning(FUNC_NAME, "Texture that we try to select doesn't exist (" + std::to_string(id) + ")");
         return;
     }
@@ -33,7 +42,7 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
     // --- Right Panel: Scrollable list of textures ---
     ImGui::BeginGroup();
 
-    ImGui::Text("Sprites list (Max spr: %d)", (assetsManager->getTextureCount() - 1));
+    ImGui::Text("Sprites list (Max spr: %d)", (textureManager->getTextureCount() - 1));
 
     // Create a scrollable panel
     ImVec2 listSize(250, 500);
@@ -52,7 +61,7 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
     // Create buttons in the scrollable panel for the current page
     for (int i = startIndex; i < endIndex; ++i) {
         bool isSelected = (i == getSelectedSpriteIndex());
-        auto texture = assetsManager->getTexture(i);
+        auto texture = textureManager->getTexture(i);
 
         ImGui::PushID(i);
         if (ImGui::ImageButton
@@ -233,7 +242,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
     }
 
     if (ImGui::Button("Replace##ReplaceInTextureList")) {
-        if (!assetsManager->isValidTextureIndex(selectedButtonIndex)) {
+        if (!textureManager->isValidTextureIndex(selectedButtonIndex)) {
             ImGui::OpenPopup("Error Remove/Replace");
         } else {
             // Open file dialog to choose a PNG file
@@ -243,7 +252,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
                 auto newTexture = std::make_shared<sf::Texture>();
                 if (newTexture->loadFromFile(filename)) {
                     int id = selectedButtonIndex; // Get the ID of the texture you want to replace
-                    assetsManager->replaceTexture(id, newTexture); // Replace it with the new texture
+                    textureManager->replaceTexture(id, newTexture); // Replace it with the new texture
                     setUnsavedChanges(true);
                 } else {
                     Warninger::sendWarning(FUNC_NAME, "Failed to load texture from: " + filename);
@@ -285,13 +294,13 @@ void SpritesScrollableWindow::drawListControlButtons() {
 
     ImGui::SameLine();
     if (ImGui::Button("Remove##RemoveInTextureList")) {
-        if (selectedButtonIndex != (assetsManager->getTextureCount() - 1)) {
+        if (selectedButtonIndex != (textureManager->getTextureCount() - 1)) {
             // If it's not last, we don't allow removal
             ImGui::OpenPopup("Error Remove/Replace");
         } else {
-            assetsManager->removeTexture(selectedButtonIndex);
+            textureManager->removeTexture(selectedButtonIndex);
             setUnsavedChanges(true);
-            selectedButtonIndex = assetsManager->getTextureCount() - 1;
+            selectedButtonIndex = textureManager->getTextureCount() - 1;
         }
     }
 
@@ -348,7 +357,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
         ImVec2 previewSize = {32, 32};
         float centerPosX = (popupSize.x - previewSize.x - 10);
         ImGui::SetCursorPosX(centerPosX);
-        ImGui::Image(assetsManager->getImGuiTexture(getSelectedSpriteIndex()), previewSize);
+        ImGui::Image(textureManager->getImGuiTexture(getSelectedSpriteIndex()), previewSize);
 
         ImGui::EndPopup();
     }
@@ -362,7 +371,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
 
 void SpritesScrollableWindow::exportTexture(Tools::EXPORT_OPTIONS option) {
     std::string filePath = (std::filesystem::path(outputFolder) / (Tools::trim(spriteName))).string() + getFormatString(option);
-    assetsManager->exportTexture(filePath, getSelectedSpriteIndex());
+    textureManager->exportTexture(filePath, getSelectedSpriteIndex());
 }
 
 void SpritesScrollableWindow::importTexture(const std::string &filePath) {
@@ -372,9 +381,9 @@ void SpritesScrollableWindow::importTexture(const std::string &filePath) {
 
     auto newTexture = std::make_shared<sf::Texture>();
     if (newTexture->loadFromFile(filePath)) {
-        bool added = assetsManager->pushTexture(newTexture);
+        bool added = textureManager->pushTexture(newTexture);
         if(added) {
-            int lastTextureIndex = assetsManager->getTextureCount()-1;
+            int lastTextureIndex = textureManager->getTextureCount()-1;
             selectSprite(lastTextureIndex, true);
             setUnsavedChanges(true);
         } else {
@@ -386,5 +395,5 @@ void SpritesScrollableWindow::importTexture(const std::string &filePath) {
 }
 
 void SpritesScrollableWindow::createNewTexture() {
-    assetsManager->createNewTexture();
+    textureManager->createNewTexture();
 }

@@ -4,12 +4,18 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
 #include "ResourceManagers/AssetsManager.h"
+#include "ResourceManagers/UIStateManager.h"
+#include "ResourceManagers/PreviewManager.h"
+#include "ResourceManagers/TextureManager.h"
 #include "Things/Items.h"
+#include "Things/ThingCategory.h"
 #include "Misc/tools.h"
 
 class ItemsScrollableWindow {
 public:
     ItemsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    // Alternative constructor with direct manager dependencies (for reduced coupling)
+    ItemsScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am);
     void drawItemTypeList(sf::Clock& deltaClock);
     void drawItemTypePanel();
 
@@ -38,7 +44,7 @@ public:
     // True - unsaved itemType changes
     // False - everything up-to-date
     bool triggerItemSavePrompt() {
-        if(assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE)) {
+        if(uiStateManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE)) {
             shouldOpenUnsavedPopup = true;
             return true;
         }
@@ -128,7 +134,7 @@ public:
         }
 
         // Load preview textures for current page
-        assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex());
+        previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::ITEM);
 
         // Only auto-select first item if requested (e.g., from page navigation buttons)
         // Don't auto-select when called from search box (we already have a selected item)
@@ -149,6 +155,7 @@ public:
             case Tools::PNG:
             case Tools::BMP:
             case Tools::JPG:
+                // Export sprite sheet - need to get it from AssetsManager for now
                 assetsManager->exportTexture(filePath, assetsManager->getItemSpriteSheet(getSelectedButtonIndex(), item->animationsFrames));
                 break;
             case Tools::TOML:
@@ -171,7 +178,10 @@ public:
     }
 private:
     sf::RenderWindow& window;
-    AssetsManager* assetsManager;
+    AssetsManager* assetsManager; // Still needed for some methods like getItemSpriteSheet, isGraphicFileLoaded, etc.
+    UIStateManager* uiStateManager;
+    PreviewManager* previewManager;
+    TextureManager* textureManager;
     Items* items;
 
     int currentPage = 0;

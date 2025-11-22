@@ -3,6 +3,20 @@ add_executable(Sprforge main.cpp
         SpritesScrollableWindow.h
         ResourceManagers/AssetsManager.cpp
         ResourceManagers/AssetsManager.h
+        ResourceManagers/UIStateManager.cpp
+        ResourceManagers/UIStateManager.h
+        ResourceManagers/TextureManager.cpp
+        ResourceManagers/TextureManager.h
+        ResourceManagers/PreviewManager.cpp
+        ResourceManagers/PreviewManager.h
+        ResourceManagers/ThingTypeHelper.cpp
+        ResourceManagers/ThingTypeHelper.h
+        ResourceManagers/SprFileHandler.cpp
+        ResourceManagers/SprFileHandler.h
+        ResourceManagers/DatFileHandler.cpp
+        ResourceManagers/DatFileHandler.h
+        ResourceManagers/DatFileHandler_Load.cpp
+        ResourceManagers/DatFileHandler_Compile.cpp
         Misc/tools.h
         Things/Thing.cpp
         Things/Thing.h

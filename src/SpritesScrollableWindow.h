@@ -4,13 +4,18 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
 #include "ResourceManagers/AssetsManager.h"
+#include "ResourceManagers/UIStateManager.h"
+#include "ResourceManagers/TextureManager.h"
 #include "Misc/tools.h"
+#include "Misc/definitions.h"
 #include "Helper/DropManager.h"
 
 
 class SpritesScrollableWindow {
 public:
     SpritesScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    // Alternative constructor with direct manager dependencies
+    SpritesScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, TextureManager* texture, AssetsManager* am);
     // Draws ScrollablePanel with Textures
     void drawTextureList(sf::Clock& deltaClock);
     // Pagination, Adding/Removing texture etc.
@@ -39,13 +44,13 @@ public:
 
     // Texture list button methods
     int getTotalButtons() {
-        return (int)assetsManager->getTextureCount();
+        return (int)textureManager->getTextureCount();
     }
     int getSelectedSpriteIndex() {
         return selectedButtonIndex;
     }
     int isAnySpriteSelected() {
-        return selectedButtonIndex >= 0 && selectedButtonIndex < assetsManager->getTextureCount();
+        return selectedButtonIndex >= 0 && selectedButtonIndex < textureManager->getTextureCount();
     }
     void setSelectedButtonIndex(int id, bool goToSelect = true) {
         if (id < 0 | id > getTotalButtons()) {
@@ -105,8 +110,8 @@ public:
         selectSprite(getPageFirstIndex());
     }
 
-    bool hasUnsavedChanges() const { return assetsManager->hasUnsavedChanges(CATEGORY_SPRITES); };
-    void setUnsavedChanges(bool value = true) const { assetsManager->setUnsavedChanges(CATEGORY_SPRITES, value); };
+    bool hasUnsavedChanges() const { return uiStateManager->hasUnsavedChanges(CATEGORY_SPRITES); };
+    void setUnsavedChanges(bool value = true) const { uiStateManager->setUnsavedChanges(CATEGORY_SPRITES, value); };
 
     void exportTexture(Tools::EXPORT_OPTIONS option);
 
@@ -115,7 +120,9 @@ public:
     }
 private:
     sf::RenderWindow& window;
-    AssetsManager* assetsManager;
+    AssetsManager* assetsManager; // Still needed for isGraphicFileLoaded
+    UIStateManager* uiStateManager;
+    TextureManager* textureManager;
     DropManager* dropManager;
 
     int currentPage = 0;

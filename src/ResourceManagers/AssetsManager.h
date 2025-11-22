@@ -15,6 +15,11 @@
 #include "../Helper/GUIHelper.h"
 #include "../Helper/SavedData.h"
 #include "UIStateManager.h"
+#include "TextureManager.h"
+#include "PreviewManager.h"
+#include "ThingTypeHelper.h"
+#include "SprFileHandler.h"
+#include "DatFileHandler.h"
 
 // ASSET_CATEGORY is now defined in UIStateManager.h to avoid circular dependency
 // TODO: Move to definitions.h for better organization
@@ -39,10 +44,10 @@ public:
     explicit AssetsManager(GUIHelper* guiHelper);
     ~AssetsManager();
 
-    std::vector<std::shared_ptr<sf::Texture>>& getTextures() { return textures; };
-    [[nodiscard]] size_t getTextureCount() const { return textures.size(); };
-    std::shared_ptr<sf::Texture> getTexture(int id);
-    ImTextureID getImGuiTexture(int id);
+    std::vector<std::shared_ptr<sf::Texture>>& getTextures() { return textureManager.getTextures(); };
+    [[nodiscard]] size_t getTextureCount() const { return textureManager.getTextureCount(); };
+    std::shared_ptr<sf::Texture> getTexture(int id) { return textureManager.getTexture(id); }
+    ImTextureID getImGuiTexture(int id) { return textureManager.getImGuiTexture(id); }
 
     /**
      * @brief Checks if the given texture is valid based on predefined conditions.
@@ -53,33 +58,47 @@ public:
      * @param texture Pointer to the sf::Texture to be validated.
      * @return True if the texture meets the validity criteria, false otherwise.
      */
-    bool isValidTexture(std::shared_ptr<sf::Texture> texture);
-    /**
-     * @brief Checks if the given index is in-range of texture collection
-     *
-     * @param id Index Number
-     * @return True if the index meets the validity criteria, false otherwise.
-     */
-    bool isValidTextureIndex(int id);
-    bool pushTexture(std::shared_ptr<sf::Texture> texture);
-    void replaceTexture(int id, std::shared_ptr<sf::Texture> newTexture);
-    void removeTexture(int id);
-    void createNewTexture();
+    bool isValidTexture(std::shared_ptr<sf::Texture> texture) { return textureManager.isValidTexture(texture); }
+    bool isValidTextureIndex(int id) { return textureManager.isValidTextureIndex(id); }
+    bool pushTexture(std::shared_ptr<sf::Texture> texture) { return textureManager.pushTexture(texture); }
+    void replaceTexture(int id, std::shared_ptr<sf::Texture> newTexture) { textureManager.replaceTexture(id, newTexture); }
+    void removeTexture(int id) { textureManager.removeTexture(id); }
+    void createNewTexture() { textureManager.createNewTexture(); }
 
     // Compiles .spr file from loaded Textures into the app
-    void compileSprFromTextures(const std::string& outputFilePath = "");
+    void compileSprFromTextures(const std::string& outputFilePath = "") {
+        sprFileHandler.compileSpr(outputFilePath, getLoadedSprSignature());
+    }
     // Main method for 'Compile' button, responsible for compiling .spr and .dat
     void compile(const std::string& outputFilesPath = "");
-    void compileOTDat(const std::string& outputFilePath = "");
+    void compileOTDat(const std::string& outputFilePath = "") {
+        datFileHandler.compileDat(outputFilePath, getLoadedSprSignature());
+    }
 
     // Loads textures from binary file containing graphics
     // Returns true if getTextureCount() is > 0.
-    bool loadSpr(const std::string& sprFilePath = "");
-    void loadOTDat(const std::string& datFilePath = "");
+    bool loadSpr(const std::string& sprFilePath = "") {
+        uint32_t signature = 0;
+        bool result = sprFileHandler.loadSpr(sprFilePath, signature);
+        if (result) {
+            setLoadedSprSignature(signature);
+            onGraphicsLoaded(sprFilePath.empty() ? ConfigManager::getInstance()->getPathAssets() + "Tibia.spr" : sprFilePath);
+        }
+        return result;
+    }
+    void loadOTDat(const std::string& datFilePath = "") {
+        if (datFileHandler.loadDat(datFilePath)) {
+            onDatLoaded(datFilePath.empty() ? ConfigManager::getInstance()->getPathAssets() + ConfigManager::getInstance()->getDatFileName() : datFilePath);
+        }
+    }
     
     // Helper functions for loading/compiling different thing types
-    void loadThingTypePatterns(std::istream& inFile, std::shared_ptr<ThingType> thingType);
-    void writeThingTypePatterns(std::ostream& outFile, std::shared_ptr<ThingType> thingType);
+    void loadThingTypePatterns(std::istream& inFile, std::shared_ptr<ThingType> thingType) {
+        datFileHandler.loadThingTypePatterns(inFile, thingType);
+    }
+    void writeThingTypePatterns(std::ostream& outFile, std::shared_ptr<ThingType> thingType) {
+        datFileHandler.writeThingTypePatterns(outFile, thingType);
+    }
 
     // Unloads all - textures, dat etc.
     void unload();
@@ -168,7 +187,9 @@ public:
      * @param patternZ pattern Z index (0-based, defaults to 0)
      */
     uint32_t getTextureIdFromThingType(const std::shared_ptr<ThingType>& thingType, int w, int h, int a, 
-                                      int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0);
+                                      int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
+        return ThingTypeHelper::getTextureIdFromThingType(thingType, w, h, a, layer, patternX, patternY, patternZ);
+    }
     
     /**
      * @brief Gets you texture id from the ItemType (wrapper for backward compatibility)
@@ -194,7 +215,9 @@ public:
      * @param patternZ pattern Z index (0-based, defaults to 0)
      */
     void setTextureIdFromThingType(std::shared_ptr<ThingType> thingType, int w, int h, int a, int newId,
-                                   int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0);
+                                   int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
+        ThingTypeHelper::setTextureIdFromThingType(thingType, w, h, a, newId, layer, patternX, patternY, patternZ);
+    }
     
     /**
      * @brief Main method to set texture in an ItemType (wrapper for backward compatibility)
@@ -224,33 +247,24 @@ public:
         setTextureIdFromThingType(it, w, h, a, newId, layer, patternX, patternY, patternZ);
     }
 
-    std::shared_ptr<sf::Texture> getPreviewTexture(int thingTypeId, ThingCategory category = ThingCategory::ITEM);
-    void replacePreviewTexture(int thingTypeId, std::shared_ptr<sf::Texture> texture, ThingCategory category = ThingCategory::ITEM);
-    /**
-     * @brief Creates preview texture for ThingType
-     *
-     * This method is very costly, since it copies, makes textures
-     * and makes render texture. It should be used with caution.
-     *
-     * @param id ThingType id
-     * @param category Category of the thing type
-     */
-    void createPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM);
-    /**
-     * @brief Creates preview texture for all things on page
-     *
-     * This method is very costly, since it copies, makes textures
-     * and makes render texture. It should be used with caution.
-     *
-     * @param pageFirstThingType Id of first thingType on page
-     * @param pageLastThingType Id of last thingType on page
-     * @param category Category of the thing types
-     */
-    void createPreviewTexturesForPage(int pageFirstThingType, int pageLastThingType, ThingCategory category = ThingCategory::ITEM);
-    void setDecoyPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM) {
-        replacePreviewTexture(id, std::make_shared<sf::Texture>(), category);
+    std::shared_ptr<sf::Texture> getPreviewTexture(int thingTypeId, ThingCategory category = ThingCategory::ITEM) {
+        return previewManager.getPreviewTexture(thingTypeId, category);
     }
-    void clearPreviewTextures();
+    void replacePreviewTexture(int thingTypeId, std::shared_ptr<sf::Texture> texture, ThingCategory category = ThingCategory::ITEM) {
+        previewManager.replacePreviewTexture(thingTypeId, texture, category);
+    }
+    void createPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM) {
+        previewManager.createPreviewTexture(id, category);
+    }
+    void createPreviewTexturesForPage(int pageFirstThingType, int pageLastThingType, ThingCategory category = ThingCategory::ITEM) {
+        previewManager.createPreviewTexturesForPage(pageFirstThingType, pageLastThingType, category);
+    }
+    void setDecoyPreviewTexture(int id, ThingCategory category = ThingCategory::ITEM) {
+        previewManager.setDecoyPreviewTexture(id, category);
+    }
+    void clearPreviewTextures() {
+        previewManager.clearPreviewTextures();
+    }
 
     /**
      * @brief Returns a sprite sheet of a thing type
@@ -265,7 +279,9 @@ public:
      * @param category Category of the thing type
      * @return sf::Texture that is composed of however many animation frames were requested in animations param
      */
-    sf::Texture getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category = ThingCategory::ITEM);
+    sf::Texture getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category = ThingCategory::ITEM) {
+        return previewManager.getThingSpriteSheet(thingTypeId, animations, category);
+    }
     
     // Wrapper for backward compatibility
     sf::Texture getItemSpriteSheet(int itemTypeId, int animations) { return getThingSpriteSheet(itemTypeId, animations, ThingCategory::ITEM); }
@@ -293,13 +309,23 @@ public:
         uiStateManager.setLastSelectedCategory(category);
     }
 
-    // Get direct access to UIStateManager for components that want to use it directly
+    // Get direct access to managers for components that want to use them directly
     UIStateManager* getUIStateManager() {
         return &uiStateManager;
     }
+    TextureManager* getTextureManager() {
+        return &textureManager;
+    }
+    PreviewManager* getPreviewManager() {
+        return &previewManager;
+    }
 
-    void exportTexture(const std::string& outputString, int textureId);
-    void exportTexture(const std::string& outputString, sf::Texture texture);
+    void exportTexture(const std::string& outputString, int textureId) {
+        textureManager.exportTexture(outputString, textureId);
+    }
+    void exportTexture(const std::string& outputString, sf::Texture texture) {
+        textureManager.exportTexture(outputString, texture);
+    }
 
     void drawAssetsManagerControls();
 
@@ -327,7 +353,7 @@ public:
         loadedSprSignature = signature;
     }
 
-    std::shared_ptr<sf::Texture> BLANK_TEXTURE;
+    std::shared_ptr<sf::Texture> BLANK_TEXTURE; // Deprecated: use textureManager.getBlankTexture() instead
 
     const char* const* getVersionsArray() {
         return m_versions;
@@ -350,16 +376,10 @@ public:
 private:
     GUIHelper* guiHelper;
     UIStateManager uiStateManager;  // Manages UI-specific state
-
-    std::vector<std::shared_ptr<sf::Texture>> textures;
-    // Separate preview texture storage for each category
-    std::vector<std::shared_ptr<sf::Texture>> previewTexturesItems;
-    std::vector<std::shared_ptr<sf::Texture>> previewTexturesOutfits;
-    std::vector<std::shared_ptr<sf::Texture>> previewTexturesEffects;
-    std::vector<std::shared_ptr<sf::Texture>> previewTexturesMissiles;
-    
-    // Helper to get the correct preview texture vector for a category
-    std::vector<std::shared_ptr<sf::Texture>>& getPreviewTexturesVector(ThingCategory category);
+    TextureManager textureManager; // Manages texture storage
+    PreviewManager previewManager;  // Manages preview texture generation
+    SprFileHandler sprFileHandler;  // Handles .spr file I/O
+    DatFileHandler datFileHandler;  // Handles .dat file I/O
 
     bool graphicFileLoaded = false; // either .spr or .assets loaded
     bool datLoaded = false; // .dat loaded

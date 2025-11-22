@@ -4,13 +4,21 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
 #include "ResourceManagers/AssetsManager.h"
+#include "ResourceManagers/UIStateManager.h"
+#include "ResourceManagers/PreviewManager.h"
+#include "ResourceManagers/TextureManager.h"
+#include "ResourceManagers/ThingTypeHelper.h"
 #include "Things/Outfits.h"
 #include "Things/ThingType.h"
+#include "Things/ThingCategory.h"
 #include "Misc/tools.h"
+#include "Misc/definitions.h"
 
 class OutfitsScrollableWindow {
 public:
     OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    // Alternative constructor with direct manager dependencies
+    OutfitsScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am);
     void drawOutfitTypeList(sf::Clock& deltaClock);
     void drawOutfitTypePanel();
     void drawPaginationControls();
@@ -25,7 +33,10 @@ public:
 
 private:
     sf::RenderWindow& window;
-    AssetsManager* assetsManager;
+    AssetsManager* assetsManager; // Still needed for isGraphicFileLoaded, isDatFileLoaded
+    UIStateManager* uiStateManager;
+    PreviewManager* previewManager;
+    TextureManager* textureManager;
 
     int currentPage = 0;
     int scrollToButtonIndex = -1;

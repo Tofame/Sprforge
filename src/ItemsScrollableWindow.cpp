@@ -9,13 +9,23 @@ ItemsScrollableWindow::ItemsScrollableWindow(sf::RenderWindow& window, AssetsMan
 : window(window)
 {
     assetsManager = am;
+    uiStateManager = am->getUIStateManager();
+    previewManager = am->getPreviewManager();
+    textureManager = am->getTextureManager();
 
     // Clear search text field, there were weird '??' artifacts sometimes
     idInputBuffer[0] = '\0';
 }
 
+ItemsScrollableWindow::ItemsScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am)
+: window(window), uiStateManager(uiState), previewManager(preview), textureManager(texture), assetsManager(am)
+{
+    // Clear search text field, there were weird '??' artifacts sometimes
+    idInputBuffer[0] = '\0';
+}
+
 void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
-    assetsManager->setLastSelectedCategory(CATEGORY_ITEMS);
+    uiStateManager->setLastSelectedCategory(CATEGORY_ITEMS);
 
     // Already selected
     if(getSelectedButtonIndex() >= 0 && id == getSelectedButtonIndex()) {
@@ -29,11 +39,11 @@ void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
 
     // Set slider to 1
     // If we go from item that e.g. had 3 animations, to the item that has less than that ...
-    assetsManager->setAnimationFrameSetting(1);
+    uiStateManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different item
     isAnimationPlaying = false;
     // To know what we selected most recently
-    assetsManager->setLastSelectedItemId(id);
+    uiStateManager->setLastSelectedItemId(id);
 
     if(triggerItemSavePrompt()) {
         return;
@@ -66,8 +76,8 @@ bool ItemsScrollableWindow::removeItemType() {
         return false;
     }
     // This one below shouldn't happen, because it should be already checked while selecting another itemType.
-    if(assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE)) {
-        if(assetsManager->getUnsavedItemTypeId() != getSelectedButtonIndex()) {
+    if(uiStateManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE)) {
+        if(uiStateManager->getUnsavedItemTypeId() != getSelectedButtonIndex()) {
             Warninger::sendWarning(FUNC_NAME, "Shouldn't be appearing!" );
             shouldOpenUnsavedPopup = true;
         }
@@ -81,21 +91,21 @@ bool ItemsScrollableWindow::removeItemType() {
     } else {
         // Deleting for example something in the middle, then we only want to reset preview, attributes etc.
         auto newIt = std::make_shared<ItemType>();
-        if(assetsManager->getUnsavedItemTypeId() != -1) {
-            assetsManager->setUnsavedItemType(newIt, assetsManager->getUnsavedItemTypeId());
-            assetsManager->setDecoyPreviewTexture(assetsManager->getUnsavedItemTypeId());
+        if(uiStateManager->getUnsavedItemTypeId() != -1) {
+            uiStateManager->setUnsavedItemType(newIt, uiStateManager->getUnsavedItemTypeId());
+            previewManager->setDecoyPreviewTexture(uiStateManager->getUnsavedItemTypeId(), ThingCategory::ITEM);
         } else {
             Warninger::sendWarning(FUNC_NAME, "No unsaved itemType detected, while removing: " + std::to_string(selectedIndex));
         }
     }
 
-    assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+    uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
     return true;
 }
 
 void ItemsScrollableWindow::onPostItemImport() {
     int newestItemIndex = Items::getItemTypesCount()-1;
-    assetsManager->createPreviewTexture(newestItemIndex);
+    previewManager->createPreviewTexture(newestItemIndex, ThingCategory::ITEM);
     selectItem(newestItemIndex, true);
 }
 
@@ -120,7 +130,7 @@ void ItemsScrollableWindow::drawItemTypeList(sf::Clock& deltaClock) {
 
     for (int i = startIndex; i < endIndex; ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
-        auto texture = assetsManager->getPreviewTexture(i);
+        auto texture = previewManager->getPreviewTexture(i, ThingCategory::ITEM);
 
         ImGui::PushID(i);
         if (ImGui::ImageButton
@@ -234,7 +244,7 @@ void ItemsScrollableWindow::drawPaginationControls() {
         int index = addItemType();
         if (index >= 1) {
             selectItem(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
 
@@ -242,7 +252,7 @@ void ItemsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Remove Item##RemoveItemTypeFromList")) {
         bool success = removeItemType();
         if (success) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
 
@@ -376,10 +386,10 @@ void ItemsScrollableWindow::drawItemTypePanel() {
         // --- Texture Tab ---
         // **Store a copy of the current item state**
         if (getSelectedButtonIndex() >= 0 && getSelectedButtonIndex() < (int)Items::getItemTypesCount()) {
-            if (assetsManager->getUnsavedItemTypeId() == -1 ||
-                assetsManager->getUnsavedItemTypeId() != getSelectedButtonIndex())
+            if (uiStateManager->getUnsavedItemTypeId() == -1 ||
+                uiStateManager->getUnsavedItemTypeId() != getSelectedButtonIndex())
             {
-                assetsManager->setUnsavedItemType(Items::getItemType(getSelectedButtonIndex()), getSelectedButtonIndex());
+                uiStateManager->setUnsavedItemType(Items::getItemType(getSelectedButtonIndex()), getSelectedButtonIndex());
             }
         }
 
@@ -449,7 +459,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                                         // These should match where the sprite is rendered
                                         assetsManager->setTextureIdFromItemType(previewIt, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
                                         // Force preview update - use the selected button index
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex());
+                                        previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
                                     }
                                     ImGui::EndDragDropTarget();
                                 }
@@ -513,7 +523,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                         if (nextFrame > previewIt->animationsFrames) {
                             nextFrame = 1;
                         }
-                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        uiStateManager->setAnimationFrameSetting(nextFrame);
                         animationClock.restart();
                     }
                 }
@@ -623,7 +633,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                         previewIt->setItemTypeAnimationCount(tempCopyIt.animationsFrames);
 
                         if(tempCopyIt.animationsFrames < assetsManager->getAnimationFrameSetting()) {
-                            assetsManager->setAnimationFrameSetting(tempCopyIt.animationsFrames);
+                            uiStateManager->setAnimationFrameSetting(tempCopyIt.animationsFrames);
                         }
                     }
 
@@ -699,12 +709,12 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
         // **Compare new and old state to check for changes**
         if (getSelectedButtonIndex() >= 0 && getSelectedButtonIndex() < (int)Items::getItemTypesCount()) {
-            if (assetsManager->getUnsavedItemTypeId() != -1 &&
-                assetsManager->getUnsavedItemTypeId() == getSelectedButtonIndex()) {
+            if (uiStateManager->getUnsavedItemTypeId() != -1 &&
+                uiStateManager->getUnsavedItemTypeId() == getSelectedButtonIndex()) {
                 if (*assetsManager->getUnsavedItemType() != *Items::getItemType(getSelectedButtonIndex())) {
-                    assetsManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, true);
+                    uiStateManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, true);
                 } else {
-                    assetsManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
+                    uiStateManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
                 }
             } else {
                 Warninger::sendWarning(FUNC_NAME, "Current UnsavedItemTypeid is not the same as selection. This warning shouldn't happen.");
@@ -718,7 +728,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
     ImGui::SetCursorPosY(propertiesGroupSize.y - 60); // magic number
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60); // magic number
 
-    auto colorsCount = Tools::pushImGuiGray(!assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
+    auto colorsCount = Tools::pushImGuiGray(!uiStateManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
     if (ImGui::Button("Save Item")) {
         triggerItemSavePrompt();
     }
@@ -726,36 +736,36 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
     ImGui::EndChild();
 
-    if (shouldOpenUnsavedPopup && assetsManager->getUnsavedItemTypeId() != -1) {
+    if (shouldOpenUnsavedPopup && uiStateManager->getUnsavedItemTypeId() != -1) {
         ImGui::OpenPopup("Unsaved Item Changes");
         shouldOpenUnsavedPopup = false;  // <-- Reset flag after opening popup
     }
 
     if (ImGui::BeginPopupModal("Unsaved Item Changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        std::string text = std::string("Save Changes in the Item ") + std::to_string(assetsManager->getUnsavedItemTypeId()) + "?";
+        std::string text = std::string("Save Changes in the Item ") + std::to_string(uiStateManager->getUnsavedItemTypeId()) + "?";
         ImGui::Text("%s", text.c_str());
 
         if (ImGui::Button("Yes")) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
 
             auto replacementItem = std::make_shared<ItemType>(*assetsManager->getUnsavedItemType());
-            bool replaceSuccess = Items::replaceItemType(assetsManager->getUnsavedItemTypeId(), replacementItem);
+            bool replaceSuccess = Items::replaceItemType(uiStateManager->getUnsavedItemTypeId(), replacementItem);
 
-            assetsManager->createPreviewTexture(getSelectedButtonIndex());
-            assetsManager->resetUnsavedItemType();
+            previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
+            uiStateManager->resetUnsavedItemType();
 
-            selectItem(assetsManager->getLastSelectedItemId(), true);
+            selectItem(uiStateManager->getLastSelectedItemId(), true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("No")) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
 
-            assetsManager->createPreviewTexture(getSelectedButtonIndex());
-            assetsManager->resetUnsavedItemType();
+            previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
+            uiStateManager->resetUnsavedItemType();
 
-            selectItem(assetsManager->getLastSelectedItemId(), true);
+            selectItem(uiStateManager->getLastSelectedItemId(), true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();

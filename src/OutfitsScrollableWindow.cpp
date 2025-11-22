@@ -5,6 +5,15 @@
 OutfitsScrollableWindow::OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
 : window(window), assetsManager(am)
 {
+    uiStateManager = am->getUIStateManager();
+    previewManager = am->getPreviewManager();
+    textureManager = am->getTextureManager();
+    idInputBuffer[0] = '\0';
+}
+
+OutfitsScrollableWindow::OutfitsScrollableWindow(sf::RenderWindow& window, UIStateManager* uiState, PreviewManager* preview, TextureManager* texture, AssetsManager* am)
+: window(window), uiStateManager(uiState), previewManager(preview), textureManager(texture), assetsManager(am)
+{
     idInputBuffer[0] = '\0';
 }
 
@@ -17,7 +26,7 @@ void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
         return;
     }
 
-    assetsManager->setAnimationFrameSetting(1);
+    uiStateManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different outfit
     isAnimationPlaying = false;
     // Reset direction to North when selecting different outfit
@@ -79,13 +88,13 @@ void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
     // Create preview textures for current page if needed
     static int lastOutfitPage = -1;
     if (getCurrentPage() != lastOutfitPage) {
-        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::OUTFIT);
+        previewManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::OUTFIT);
         lastOutfitPage = getCurrentPage();
     }
 
     for (int i = startIndex; i < endIndex && i < (int)Outfits::getOutfitTypesCount(); ++i) {
         bool isSelected = (i == getSelectedButtonIndex());
-        auto texture = assetsManager->getPreviewTexture(i, ThingCategory::OUTFIT);
+        auto texture = previewManager->getPreviewTexture(i, ThingCategory::OUTFIT);
 
         ImGui::PushID(i);
         if (ImGui::ImageButton("##OutfitTypeButton", (ImTextureID) texture->getNativeHandle(),
@@ -162,8 +171,8 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                             }
                             int patternYIdx = 0;
                             int patternZIdx = 0;
-                            int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), l, patternXIdx, patternYIdx, patternZIdx);
-                            auto texture = assetsManager->getTexture(spriteIndex);
+                            int spriteIndex = ThingTypeHelper::getTextureIdFromThingType(unsavedOutfitType, w, h, uiStateManager->getAnimationFrameSetting(), l, patternXIdx, patternYIdx, patternZIdx);
+                            auto texture = textureManager->getTexture(spriteIndex);
 
                             if (texture) {
                                 ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
@@ -183,8 +192,8 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                                     if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
                                         int newTextureId = *(int *) payload->Data;
                                         // Use selected direction when dropping sprites
-                                        assetsManager->setTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, selectedDirection, 0, 0);
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::OUTFIT);
+                                        ThingTypeHelper::setTextureIdFromThingType(unsavedOutfitType, w, h, uiStateManager->getAnimationFrameSetting(), newTextureId, l, selectedDirection, 0, 0);
+                                        previewManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::OUTFIT);
                                     }
                                     ImGui::EndDragDropTarget();
                                 }
@@ -203,10 +212,10 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 ImGui::SameLine();
                 float width = ImGui::GetContentRegionAvail().x * 0.15f;
                 ImGui::PushItemWidth(width);
-                int previousFrame = assetsManager->getAnimationFrameSetting();
-                ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, unsavedOutfitType->animationsFrames);
+                int previousFrame = uiStateManager->getAnimationFrameSetting();
+                ImGui::SliderInt("Animation Frame", &uiStateManager->getAnimationFrameSettingRef(), 1, unsavedOutfitType->animationsFrames);
                 // Stop animation if user manually changes the slider
-                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+                if (uiStateManager->getAnimationFrameSetting() != previousFrame) {
                     isAnimationPlaying = false;
                 }
                 ImGui::PopItemWidth();
@@ -235,13 +244,13 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     float elapsed = animationClock.getElapsedTime().asSeconds();
                     if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
                         // Advance to next frame
-                        int currentFrame = assetsManager->getAnimationFrameSetting();
+                        int currentFrame = uiStateManager->getAnimationFrameSetting();
                         int nextFrame = currentFrame + 1;
                         // Loop using modulo: frame 1 to animationsFrames, then back to 1
                         if (nextFrame > unsavedOutfitType->animationsFrames) {
                             nextFrame = 1;
                         }
-                        assetsManager->setAnimationFrameSetting(nextFrame);
+                        uiStateManager->setAnimationFrameSetting(nextFrame);
                         animationClock.restart();
                     }
                 }
@@ -411,8 +420,8 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         animations = std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
                         unsavedOutfitType->setAnimationCount(animations);
-                        if(animations < assetsManager->getAnimationFrameSetting()) {
-                            assetsManager->setAnimationFrameSetting(animations);
+                        if(animations < uiStateManager->getAnimationFrameSetting()) {
+                            uiStateManager->setAnimationFrameSetting(animations);
                         }
                     }
                     ImGui::PopItemWidth();
@@ -435,8 +444,8 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
         if (ImGui::Button("Save Outfit")) {
             if (unsavedOutfitType && unsavedOutfitTypeId >= 0) {
                 Outfits::replaceOutfitType(unsavedOutfitTypeId, std::make_shared<OutfitType>(*unsavedOutfitType));
-                assetsManager->createPreviewTexture(unsavedOutfitTypeId, ThingCategory::OUTFIT);
-                assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+                previewManager->createPreviewTexture(unsavedOutfitTypeId, ThingCategory::OUTFIT);
+                uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
             }
         }
     }
@@ -457,7 +466,7 @@ void OutfitsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("<< Page##OutfitTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::OUTFIT);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::OUTFIT);
         }
     }
     ImGui::SameLine();
@@ -477,7 +486,7 @@ void OutfitsScrollableWindow::drawPaginationControls() {
     if (ImGui::Button("Page >>##OutfitTypeListPageInc")) {
         if(getPageLastIndex() < getTotalButtons()) {
             setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::OUTFIT);
+            previewManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::OUTFIT);
         }
     }
 
@@ -485,13 +494,13 @@ void OutfitsScrollableWindow::drawPaginationControls() {
         int index = addOutfitType();
         if (index >= 1) {
             selectOutfit(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("Remove Outfit##RemoveOutfitTypeFromList")) {
         if(removeOutfitType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+            uiStateManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
 
