@@ -50,6 +50,43 @@ add_executable(Sprforge main.cpp
 target_link_libraries(Sprforge PRIVATE ImGui-SFML::ImGui-SFML nfd fmt)
 target_include_directories(Sprforge PRIVATE ${tomlplusplus_SOURCE_DIR}/include)
 
+# macOS-specific configuration
+if(APPLE)
+    # Link macOS frameworks needed for clipboard and drag-and-drop
+    target_link_libraries(Sprforge PRIVATE 
+        "-framework AppKit"
+        "-framework CoreGraphics"
+        "-framework Foundation"
+    )
+    
+    # Set Objective-C++ standard for files that include Objective-C++ code
+    set_target_properties(Sprforge PROPERTIES
+        OBJCXX_STANDARD 17
+        OBJCXX_STANDARD_REQUIRED ON
+    )
+    
+    # Enable Objective-C++ for source files that include tools.h
+    # Since tools.h contains Objective-C++ code, we need to compile C++ files as Objective-C++
+    set_source_files_properties(
+        main.cpp
+        SpritesScrollableWindow.cpp
+        ItemsScrollableWindow.cpp
+        OutfitsScrollableWindow.cpp
+        EffectsScrollableWindow.cpp
+        MissilesScrollableWindow.cpp
+        ResourceManagers/AssetsManager.cpp
+        ResourceManagers/ConfigManager.cpp
+        Helper/GUIHelper.cpp
+        Helper/SavedData.cpp
+        Things/Item.cpp
+        Things/Thing.cpp
+        Things/ThingType.cpp
+        Things/ItemType.cpp
+        Things/Items.cpp
+        PROPERTIES COMPILE_FLAGS "-x objective-c++"
+    )
+endif()
+
 # Copy DLLs needed for runtime on Windows
 if(WIN32)
   if (BUILD_SHARED_LIBS)

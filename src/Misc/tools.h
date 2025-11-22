@@ -16,6 +16,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <objc/objc.h>
+#include <objc/runtime.h>
+#import <AppKit/AppKit.h>
+#import <CoreGraphics/CoreGraphics.h>
 #elif __linux__
 #include <unistd.h>
 #include <sys/types.h>
@@ -216,6 +220,7 @@ namespace Tools {
 
     inline bool pasteTextureFromClipboard(std::shared_ptr<sf::Texture> texture, bool addAlphaChannel = true,
                                                  bool removeMagenta = true) {
+#ifdef _WIN32
         if (!OpenClipboard(nullptr)) return false;
 
         HBITMAP hBitmap = (HBITMAP) GetClipboardData(CF_BITMAP);
@@ -255,6 +260,160 @@ namespace Tools {
 
         CloseClipboard();
         return false;
+#elif __APPLE__
+        // macOS implementation using Cocoa APIs
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            NSArray* types = [pasteboard types];
+            
+            // Try to get image data
+            if ([types containsObject:NSPasteboardTypePNG]) {
+                NSData* pngData = [pasteboard dataForType:NSPasteboardTypePNG];
+                if (pngData) {
+                    NSImage* nsImage = [[NSImage alloc] initWithData:pngData];
+                    if (nsImage) {
+                        CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
+                        if (cgImage) {
+                            size_t width = CGImageGetWidth(cgImage);
+                            size_t height = CGImageGetHeight(cgImage);
+                            
+                            sf::Image image{sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)), sf::Color::Transparent};
+                            
+                            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+                            size_t bytesPerPixel = 4;
+                            size_t bytesPerRow = bytesPerPixel * width;
+                            size_t bufferSize = bytesPerRow * height;
+                            std::vector<uint8_t> buffer(bufferSize);
+                            
+                            CGContextRef context = CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+                            
+                            if (context) {
+                                CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
+                                
+                                // Convert from RGBA to SFML format
+                                for (size_t y = 0; y < height; ++y) {
+                                    for (size_t x = 0; x < width; ++x) {
+                                        size_t index = (y * width + x) * 4;
+                                        uint8_t r = buffer[index];
+                                        uint8_t g = buffer[index + 1];
+                                        uint8_t b = buffer[index + 2];
+                                        uint8_t a = buffer[index + 3];
+                                        image.setPixel(sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)), 
+                                                       sf::Color(r, g, b, a));
+                                    }
+                                }
+                                
+                                CGContextRelease(context);
+                                CGColorSpaceRelease(colorSpace);
+                                
+                                // Ensure 32-bit RGBA
+                                if (addAlphaChannel) {
+                                    ensureAlphaChannel(image);
+                                }
+                                if (removeMagenta) {
+                                    imageRemoveMagenta(image);
+                                }
+                                
+                                return texture->loadFromImage(image);
+                            }
+                            CGColorSpaceRelease(colorSpace);
+                        }
+                    }
+                }
+            }
+            
+            // Fallback to TIFF if PNG not available
+            if ([types containsObject:NSPasteboardTypeTIFF]) {
+                NSData* tiffData = [pasteboard dataForType:NSPasteboardTypeTIFF];
+                if (tiffData) {
+                    NSImage* nsImage = [[NSImage alloc] initWithData:tiffData];
+                    if (nsImage) {
+                        CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
+                        if (cgImage) {
+                            size_t width = CGImageGetWidth(cgImage);
+                            size_t height = CGImageGetHeight(cgImage);
+                            
+                            sf::Image image{sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)), sf::Color::Transparent};
+                            
+                            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+                            size_t bytesPerPixel = 4;
+                            size_t bytesPerRow = bytesPerPixel * width;
+                            size_t bufferSize = bytesPerRow * height;
+                            std::vector<uint8_t> buffer(bufferSize);
+                            
+                            CGContextRef context = CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+                            
+                            if (context) {
+                                CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
+                                
+                                // Convert from RGBA to SFML format
+                                for (size_t y = 0; y < height; ++y) {
+                                    for (size_t x = 0; x < width; ++x) {
+                                        size_t index = (y * width + x) * 4;
+                                        uint8_t r = buffer[index];
+                                        uint8_t g = buffer[index + 1];
+                                        uint8_t b = buffer[index + 2];
+                                        uint8_t a = buffer[index + 3];
+                                        image.setPixel(sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)), 
+                                                       sf::Color(r, g, b, a));
+                                    }
+                                }
+                                
+                                CGContextRelease(context);
+                                CGColorSpaceRelease(colorSpace);
+                                
+                                // Ensure 32-bit RGBA
+                                if (addAlphaChannel) {
+                                    ensureAlphaChannel(image);
+                                }
+                                if (removeMagenta) {
+                                    imageRemoveMagenta(image);
+                                }
+                                
+                                return texture->loadFromImage(image);
+                            }
+                            CGColorSpaceRelease(colorSpace);
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+#else
+        // Linux: Not implemented yet
+        return false;
+#endif
+    }
+
+    // Platform-specific clipboard check functions
+    inline bool hasImageInClipboard() {
+#ifdef _WIN32
+        return IsClipboardFormatAvailable(CF_BITMAP) != 0;
+#elif __APPLE__
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            NSArray* types = [pasteboard types];
+            return [types containsObject:NSPasteboardTypePNG] || [types containsObject:NSPasteboardTypeTIFF];
+        }
+#else
+        return false;
+#endif
+    }
+
+    inline bool hasItemTypeInClipboard() {
+#ifdef _WIN32
+        static UINT format = RegisterClipboardFormat("ItemTypeBinary");
+        return IsClipboardFormatAvailable(format) != 0;
+#elif __APPLE__
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            NSArray* types = [pasteboard types];
+            NSString* customType = @"com.sprforge.ItemTypeBinary";
+            return [types containsObject:customType];
+        }
+#else
+        return false;
+#endif
     }
 
 // Ensures the image has an alpha channel (RGBA instead of RGB)
@@ -290,6 +449,7 @@ namespace Tools {
         sf::Image image = texture.copyToImage();
         sf::Vector2u size = image.getSize();
 
+#ifdef _WIN32
         BITMAPINFOHEADER bi = {};
         bi.biSize = sizeof(BITMAPINFOHEADER);
         bi.biWidth = size.x;
@@ -339,6 +499,62 @@ namespace Tools {
 
         DeleteObject(hBitmap);
         return false;
+#elif __APPLE__
+        // macOS implementation using Cocoa APIs
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            [pasteboard clearContents];
+            
+            // Convert SFML image to NSImage
+            size_t width = size.x;
+            size_t height = size.y;
+            const uint8_t* pixels = image.getPixelsPtr();
+            
+            // Create CGImage from pixel data
+            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+            CGContextRef context = CGBitmapContextCreate(
+                const_cast<uint8_t*>(pixels),
+                width, height, 8, width * 4,
+                colorSpace,
+                kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big
+            );
+            
+            if (!context) {
+                CGColorSpaceRelease(colorSpace);
+                return false;
+            }
+            
+            CGImageRef cgImage = CGBitmapContextCreateImage(context);
+            CGContextRelease(context);
+            CGColorSpaceRelease(colorSpace);
+            
+            if (!cgImage) {
+                return false;
+            }
+            
+            // Create NSImage from CGImage
+            NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];
+            CGImageRelease(cgImage);
+            
+            if (!nsImage) {
+                return false;
+            }
+            
+            // Convert to PNG data
+            NSData* pngData = [nsImage TIFFRepresentation];
+            NSBitmapImageRep* bitmapRep = [NSBitmapImageRep imageRepWithData:pngData];
+            NSData* pngDataFinal = [bitmapRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+            
+            if (pngDataFinal) {
+                return [pasteboard setData:pngDataFinal forType:NSPasteboardTypePNG];
+            }
+            
+            return false;
+        }
+#else
+        // Linux: Not implemented yet
+        return false;
+#endif
     }
 
     inline bool copyItemTypeToClipboard(const ItemType &item) {
@@ -356,6 +572,7 @@ namespace Tools {
                          reinterpret_cast<uint8_t *>(&dataSize) + sizeof(dataSize));
         finalData.insert(finalData.end(), data.begin(), data.end());
 
+#ifdef _WIN32
         // Copy to clipboard
         if (!OpenClipboard(nullptr)) return false;
 
@@ -386,9 +603,25 @@ namespace Tools {
 
         CloseClipboard();
         return true;
+#elif __APPLE__
+        // macOS implementation using Cocoa APIs
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            [pasteboard clearContents];
+            
+            NSData* dataObj = [NSData dataWithBytes:finalData.data() length:finalData.size()];
+            NSString* customType = @"com.sprforge.ItemTypeBinary";
+            
+            return [pasteboard setData:dataObj forType:customType];
+        }
+#else
+        // Linux: Not implemented yet
+        return false;
+#endif
     }
 
     inline bool pasteItemTypeFromClipboard(ItemType &itemType) {
+#ifdef _WIN32
         if (!OpenClipboard(nullptr)) return false;
 
         static UINT format = RegisterClipboardFormat("ItemTypeBinary");
@@ -422,6 +655,43 @@ namespace Tools {
         Items::deserializeItemType(stream, itemType);
 
         return true;
+#elif __APPLE__
+        // macOS implementation using Cocoa APIs
+        @autoreleasepool {
+            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+            NSArray* types = [pasteboard types];
+            NSString* customType = @"com.sprforge.ItemTypeBinary";
+            
+            if (![types containsObject:customType]) {
+                return false;
+            }
+            
+            NSData* dataObj = [pasteboard dataForType:customType];
+            if (!dataObj) {
+                return false;
+            }
+            
+            size_t dataSize = [dataObj length];
+            std::vector<uint8_t> finalData(dataSize);
+            [dataObj getBytes:finalData.data() length:dataSize];
+            
+            // Validate size header
+            if (dataSize < sizeof(size_t)) return false;
+            size_t serializedSize;
+            memcpy(&serializedSize, finalData.data(), sizeof(serializedSize));
+            if (dataSize != sizeof(serializedSize) + serializedSize) return false;
+            
+            // Deserialize from memory stream
+            std::string dataStr(finalData.begin() + sizeof(serializedSize), finalData.end());
+            std::stringstream stream(dataStr);
+            Items::deserializeItemType(stream, itemType);
+            
+            return true;
+        }
+#else
+        // Linux: Not implemented yet
+        return false;
+#endif
     }
 
 /**
