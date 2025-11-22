@@ -164,34 +164,111 @@ public:
      * @brief Gets you texture id from the ItemType
      *
      * Every ItemType can be composed of more than 1 texture.
-     * And so, when we want to know the id of a texture that item has
-     * we can do that by accessing ItemType's vector that stores information about used texture ids.
+     * The sprite index is calculated using the Tibia .dat format order (matching ObjectBuilder):
+     * spriteIndex = (((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
      *
-     * @param it itemType from which we will get basic information, such as it's max width/height
-     * @param h cell's 'height' from which we want texture
-     * @param w cell's 'width' from which we want texture
-     * @param a cell's 'animation frame' that is set on the animation slider to know in which animation frame find the texture
+     * Note: Parameters match ObjectBuilder's getSpriteIndex(w, h, l, px, py, pz, f) order
+     *
+     * @param it itemType from which we will get basic information
+     * @param w cell's 'width' (0-based) - X coordinate
+     * @param h cell's 'height' (0-based) - Y coordinate
+     * @param a cell's 'animation frame' (1-based, converted to 0-based internally)
+     * @param layer layer index (0-based, defaults to 0)
+     * @param patternX pattern X index (0-based, defaults to 0)
+     * @param patternY pattern Y index (0-based, defaults to 0)
+     * @param patternZ pattern Z index (0-based, defaults to 0)
      */
-    uint32_t getTextureIdFromItemType(const std::shared_ptr<ItemType>& it, int h, int w, int a) {
-        int index = h * it->width + w + ((a-1) * (it->width * it->height));
-        return it->textureIdsVector[index];
+    uint32_t getTextureIdFromItemType(const std::shared_ptr<ItemType>& it, int w, int h, int a, 
+                                      int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
+        // Validate input parameters
+        if (!it || it->width == 0 || it->height == 0 || it->layers == 0 || 
+            it->patternX == 0 || it->patternY == 0 || it->patternZ == 0 || it->animationsFrames == 0) {
+            return 0; // Return blank texture for invalid item
+        }
+        
+        // Validate indices are within bounds
+        if (w < 0 || w >= it->width || h < 0 || h >= it->height ||
+            layer < 0 || layer >= it->layers ||
+            patternX < 0 || patternX >= it->patternX ||
+            patternY < 0 || patternY >= it->patternY ||
+            patternZ < 0 || patternZ >= it->patternZ) {
+            return 0; // Return blank texture for out of bounds indices
+        }
+        
+        // Convert animation frame from 1-based to 0-based
+        int frame = a - 1;
+        if (frame < 0) frame = 0;
+        if (frame >= it->animationsFrames) frame = frame % it->animationsFrames;
+        
+        // Calculate sprite index using Tibia .dat format (matching ObjectBuilder's getSpriteIndex)
+        // Order: frame -> patternZ -> patternY -> patternX -> layers -> height -> width
+        // Formula: (((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
+        // 
+        // ObjectBuilder's formula: ... * height + height) * width + width
+        // Use the formula exactly as ObjectBuilder does, with w and h as passed
+        int spriteIndex = (((((((frame % it->animationsFrames) * it->patternZ + patternZ) * 
+                              it->patternY + patternY) * 
+                              it->patternX + patternX) * 
+                              it->layers + layer) * 
+                              it->height + h) * 
+                              it->width + w);
+        
+        if (spriteIndex < 0 || spriteIndex >= static_cast<int>(it->textureIdsVector.size())) {
+            return 0; // Return blank texture if index is out of bounds
+        }
+        
+        return it->textureIdsVector[spriteIndex];
     }
+    
     /**
      * @brief Main method to set texture in an ItemType
      *
-     * Method to set texture in an ItemType at a desired by us position
-     * ... so, width, height, animation frame etc.
+     * Method to set texture in an ItemType at a desired position.
      *
      * @param it itemType that we want to assign texture id to
-     * @param h cell's 'height' to which we want to assign texture id
-     * @param w cell's 'width' to which we want to assign texture id
-     * @param a cell's 'animation frame' to which we want to assign texture id
-     * @param newId textureId that will be set at the desired position. I call it newId, because
-     * it substitutes the previously texture id that was at that position (index).
+     * @param w cell's 'width' (0-based) - X coordinate
+     * @param h cell's 'height' (0-based) - Y coordinate
+     * @param a cell's 'animation frame' (1-based)
+     * @param newId textureId that will be set at the desired position
+     * @param layer layer index (0-based, defaults to 0)
+     * @param patternX pattern X index (0-based, defaults to 0)
+     * @param patternY pattern Y index (0-based, defaults to 0)
+     * @param patternZ pattern Z index (0-based, defaults to 0)
      */
-    void setTextureIdFromItemType(std::shared_ptr<ItemType> it, int h, int w, int a, int newId) {
-        int index = h * it->width + w + ((a-1) * (it->width * it->height));
-        it->textureIdsVector[index] = newId;
+    void setTextureIdFromItemType(std::shared_ptr<ItemType> it, int w, int h, int a, int newId,
+                                   int layer = 0, int patternX = 0, int patternY = 0, int patternZ = 0) {
+        // Validate input parameters
+        if (!it || it->width == 0 || it->height == 0 || it->layers == 0 || 
+            it->patternX == 0 || it->patternY == 0 || it->patternZ == 0 || it->animationsFrames == 0) {
+            return; // Skip invalid item
+        }
+        
+        // Validate indices are within bounds
+        if (w < 0 || w >= it->width || h < 0 || h >= it->height ||
+            layer < 0 || layer >= it->layers ||
+            patternX < 0 || patternX >= it->patternX ||
+            patternY < 0 || patternY >= it->patternY ||
+            patternZ < 0 || patternZ >= it->patternZ) {
+            return; // Skip out of bounds indices
+        }
+        
+        // Convert animation frame from 1-based to 0-based
+        int frame = a - 1;
+        if (frame < 0) frame = 0;
+        if (frame >= it->animationsFrames) frame = frame % it->animationsFrames;
+        
+        // Calculate sprite index using Tibia .dat format (matching ObjectBuilder)
+        // Use coordinates directly without inversion (matching getTextureIdFromItemType)
+        int spriteIndex = (((((((frame % it->animationsFrames) * it->patternZ + patternZ) * 
+                              it->patternY + patternY) * 
+                              it->patternX + patternX) * 
+                              it->layers + layer) * 
+                              it->height + h) * 
+                              it->width + w);
+        
+        if (spriteIndex >= 0 && spriteIndex < static_cast<int>(it->textureIdsVector.size())) {
+            it->textureIdsVector[spriteIndex] = newId;
+        }
     }
 
     std::shared_ptr<sf::Texture> getPreviewTexture(int itemTypeId);

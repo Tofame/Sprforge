@@ -71,6 +71,10 @@ public:
     void setItemTypeWidth(int width);
     void setItemTypeHeight(int height);
     void setItemTypeAnimationCount(int count);
+    void setItemTypeLayers(int layers);
+    void setItemTypePatternX(int patternX);
+    void setItemTypePatternY(int patternY);
+    void setItemTypePatternZ(int patternZ);
 
     [[nodiscard]] int getCalcIndexesCount() const;
 
@@ -81,6 +85,10 @@ public:
                width == other.width &&
                height == other.height &&
                animationsFrames == other.animationsFrames &&
+               patternX == other.patternX &&
+               patternY == other.patternY &&
+               patternZ == other.patternZ &&
+               layers == other.layers &&
                textureIdsVector == other.textureIdsVector;
     }
 
@@ -97,6 +105,10 @@ public:
             width = other.width;
             height = other.height;
             animationsFrames = other.animationsFrames;
+            patternX = other.patternX;
+            patternY = other.patternY;
+            patternZ = other.patternZ;
+            layers = other.layers;
             textureIdsVector = other.textureIdsVector;
         }
         return *this;

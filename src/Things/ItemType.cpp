@@ -22,7 +22,7 @@ void ItemType::onItemTypeWidthChanged(int oldWith, int newWidth) {
 }
 
 int ItemType::getCalcIndexesCount() const {
-    return width * height * animationsFrames;
+    return width * height * layers * patternX * patternY * patternZ * animationsFrames;
 }
 
 void ItemType::setItemTypeHeight(int _height) {
@@ -55,4 +55,44 @@ void ItemType::onItemTypeAnimationFramesChanged(int oldAnimationCount, int anima
 
     int total = getCalcIndexesCount();
     this->textureIdsVector.resize(total, 0);
+}
+
+void ItemType::setItemTypeLayers(int _layers) {
+    int oldLayers = this->layers;
+    this->layers = _layers;
+    
+    if(oldLayers != _layers) {
+        int total = getCalcIndexesCount();
+        this->textureIdsVector.resize(total, 0);
+    }
+}
+
+void ItemType::setItemTypePatternX(int _patternX) {
+    int oldPatternX = this->patternX;
+    this->patternX = _patternX;
+    
+    if(oldPatternX != _patternX) {
+        int total = getCalcIndexesCount();
+        this->textureIdsVector.resize(total, 0);
+    }
+}
+
+void ItemType::setItemTypePatternY(int _patternY) {
+    int oldPatternY = this->patternY;
+    this->patternY = _patternY;
+    
+    if(oldPatternY != _patternY) {
+        int total = getCalcIndexesCount();
+        this->textureIdsVector.resize(total, 0);
+    }
+}
+
+void ItemType::setItemTypePatternZ(int _patternZ) {
+    int oldPatternZ = this->patternZ;
+    this->patternZ = _patternZ;
+    
+    if(oldPatternZ != _patternZ) {
+        int total = getCalcIndexesCount();
+        this->textureIdsVector.resize(total, 0);
+    }
 }

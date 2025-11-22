@@ -15,10 +15,21 @@ AssetsManager::AssetsManager(GUIHelper* guiHelper) {
 
     // Setup blank texture
     auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
-    sf::Image image({spriteMaxSize, spriteMaxSize}, sf::Color::Transparent);
+    if (spriteMaxSize <= 0 || spriteMaxSize > 1024) {
+        spriteMaxSize = 32; // Default fallback
+        Warninger::sendWarning(FUNC_NAME, "Invalid spriteMaxSize, using default 32");
+    }
+    
+    sf::Image image({static_cast<unsigned>(spriteMaxSize), static_cast<unsigned>(spriteMaxSize)}, sf::Color::Transparent);
     BLANK_TEXTURE = std::make_shared<sf::Texture>();
     if (!BLANK_TEXTURE->loadFromImage(image)) {
-        Warninger::sendWarning(FUNC_NAME, "Failed to create blank texture.");
+        // Try creating a minimal 1x1 texture as absolute fallback
+        sf::Image fallbackImage({1, 1}, sf::Color::Transparent);
+        if (!BLANK_TEXTURE->loadFromImage(fallbackImage)) {
+            Warninger::sendErrorMsg(FUNC_NAME, "CRITICAL: Failed to create blank texture. Application may be unstable.");
+        } else {
+            Warninger::sendWarning(FUNC_NAME, "Created minimal blank texture (1x1) due to spriteMaxSize issue.");
+        }
     }
 
     // Setup Temp Info for "New Assets" creation
@@ -87,67 +98,95 @@ bool AssetsManager::loadSpr(const std::string& sprFilePath) {
     const auto& singleSpriteSize = getSpriteDimensionsVector().at(m_assetsInfo.dimensionIndex);
 
     // Process each sprite
+    // IMPORTANT: We must push a texture for EVERY sprite ID, even if offset is 0 or sprite is empty
+    // This maintains the correct mapping: sprite ID in .dat file = texture index in our vector
     for (uint32_t spriteId = 1; spriteId <= spriteCount; ++spriteId) {
         uint32_t offset = offsets[spriteId - 1];
-        if (offset == 0) continue;
+        std::shared_ptr<sf::Texture> texture;
+        
+        if (offset == 0) {
+            // Sprite doesn't exist (offset 0), push blank texture to maintain index mapping
+            texture = BLANK_TEXTURE;
+        } else {
+            file.seekg(offset, std::ios::beg);
+            if (!file.good()) {
+                Warninger::sendWarning(FUNC_NAME, "Failed to seek to offset for sprite " + std::to_string(spriteId) + ". Using blank texture.");
+                texture = BLANK_TEXTURE;
+            } else {
+                file.ignore(3); // Skip unused bytes (RGB)
 
-        file.seekg(offset, std::ios::beg);
-        file.ignore(3); // Skip unused bytes
+                // Read sprite data size
+                uint16_t dataSize;
+                file.read(reinterpret_cast<char*>(&dataSize), 2);
+                
+                if (!file.good() || dataSize == 0) {
+                    // Empty sprite or read error, use blank texture
+                    texture = BLANK_TEXTURE;
+                } else {
+                    // Read compressed sprite data
+                    std::vector<uint8_t> spriteData(dataSize);
+                    file.read(reinterpret_cast<char*>(spriteData.data()), dataSize);
+                    
+                    if (!file.good()) {
+                        Warninger::sendWarning(FUNC_NAME, "Failed to read sprite data for sprite " + std::to_string(spriteId) + ". Using blank texture.");
+                        texture = BLANK_TEXTURE;
+                    } else {
+                        // Process RLE data into RGBA pixels
+                        std::vector<uint8_t> pixels(singleSpriteSize * singleSpriteSize * 4, 0); // RGBA buffer
+                        size_t dataPtr = 0;
+                        size_t pixelPtr = 0;
 
-        // Read sprite data size
-        uint16_t dataSize;
-        file.read(reinterpret_cast<char*>(&dataSize), 2);
+                        while (pixelPtr < singleSpriteSize * singleSpriteSize && dataPtr < spriteData.size()) {
+                            // Read transparent pixels count
+                            if (dataPtr + 2 > spriteData.size()) break;
+                            uint16_t transparent = readLE16(&spriteData[dataPtr]);
+                            dataPtr += 2;
+                            pixelPtr += transparent;
 
-        // Read compressed sprite data
-        std::vector<uint8_t> spriteData(dataSize);
-        file.read(reinterpret_cast<char*>(spriteData.data()), dataSize);
+                            if (pixelPtr >= singleSpriteSize * singleSpriteSize) break;
 
-        // Process RLE data into 32x32 RGBA pixels
-        std::vector<uint8_t> pixels(singleSpriteSize * singleSpriteSize * 4, 0); // RGBA buffer
-        size_t dataPtr = 0;
-        size_t pixelPtr = 0;
+                            // Read colored pixels count
+                            if (dataPtr + 2 > spriteData.size()) break;
+                            uint16_t colored = readLE16(&spriteData[dataPtr]);
+                            dataPtr += 2;
 
-        while (pixelPtr < singleSpriteSize * singleSpriteSize && dataPtr < spriteData.size()) {
-            // Read transparent pixels count
-            if (dataPtr + 2 > spriteData.size()) break;
-            uint16_t transparent = readLE16(&spriteData[dataPtr]);
-            dataPtr += 2;
-            pixelPtr += transparent;
+                            for (uint16_t i = 0; i < colored; ++i) {
+                                if (pixelPtr >= singleSpriteSize * singleSpriteSize || dataPtr + 3 > spriteData.size()) break;
 
-            if (pixelPtr >= singleSpriteSize * singleSpriteSize) break;
+                                // Read RGB values
+                                uint8_t r = spriteData[dataPtr++];
+                                uint8_t g = spriteData[dataPtr++];
+                                uint8_t b = spriteData[dataPtr++];
+                                uint8_t a = m_assetsInfo.transparency ? (dataPtr < spriteData.size() ? spriteData[dataPtr++] : 255) : 255;
 
-            // Read colored pixels count
-            if (dataPtr + 2 > spriteData.size()) break;
-            uint16_t colored = readLE16(&spriteData[dataPtr]);
-            dataPtr += 2;
+                                // Fill RGBA buffer
+                                size_t idx = pixelPtr * 4;
+                                pixels[idx] = r;
+                                pixels[idx + 1] = g;
+                                pixels[idx + 2] = b;
+                                pixels[idx + 3] = a;
 
-            for (uint16_t i = 0; i < colored; ++i) {
-                if (pixelPtr >= singleSpriteSize * singleSpriteSize || dataPtr + 3 > spriteData.size()) break;
+                                pixelPtr++;
+                            }
+                        }
 
-                // Read RGB values
-                uint8_t r = spriteData[dataPtr++];
-                uint8_t g = spriteData[dataPtr++];
-                uint8_t b = spriteData[dataPtr++];
-                uint8_t a = m_assetsInfo.transparency ? spriteData[dataPtr++] : 255;
-
-                // Fill RGBA buffer
-                size_t idx = pixelPtr * 4;
-                pixels[idx] = r;
-                pixels[idx + 1] = g;
-                pixels[idx + 2] = b;
-                pixels[idx + 3] = a;
-
-                pixelPtr++;
+                        // Create texture from pixels
+                        // Create an image from pixel data, then load texture from it
+                        sf::Image image(sf::Vector2u(singleSpriteSize, singleSpriteSize), pixels.data());
+                        texture = std::make_shared<sf::Texture>();
+                        if (texture->loadFromImage(image)) {
+                            // Texture loaded successfully
+                        } else {
+                            Warninger::sendWarning(FUNC_NAME, "Failed to create texture for sprite " + std::to_string(spriteId) + ". Using blank texture.");
+                            texture = BLANK_TEXTURE;
+                        }
+                    }
+                }
             }
         }
-
-        auto texture = std::make_shared<sf::Texture>(sf::Vector2u(singleSpriteSize, singleSpriteSize));
-        if (texture->getSize().x != 0 && texture->getSize().y != 0) {
-            texture->update(pixels.data());
-            textures.push_back(texture);
-        } else {
-            //Warninger::sendWarning(FUNC_NAME, "Failed to create texture, id: " + std::to_string(textureId));
-        }
+        
+        // ALWAYS push a texture (even if blank) to maintain correct sprite ID to texture index mapping
+        textures.push_back(texture);
     }
 
     onGraphicsLoaded(decidedPath);
@@ -361,7 +400,193 @@ void AssetsManager::exportTexture(const std::string& outputString, sf::Texture t
 }
 
 void AssetsManager::compileOTDat(const std::string& outputFilePath) {
-    fmt::println("--- Compiling .dat needs to be implemented :) TO-DO");
+    Timer timer("Compiling .dat (OTDat)");
+    
+    std::string decidedPath = outputFilePath;
+    if(decidedPath.empty()) {
+        decidedPath = ConfigManager::getInstance()->getPathAssets() +
+                      ConfigManager::getInstance()->getDatFileName();
+    }
+    
+    try {
+        std::ofstream outFile(decidedPath, std::ios::binary);
+        if (!outFile.is_open()) {
+            Warninger::sendErrorMsg(FUNC_NAME, "Failed to open file for writing: " + decidedPath);
+            return;
+        }
+        
+        // Write signature (use loaded signature or default)
+        uint32_t datSignature = getLoadedSprSignature();
+        if (datSignature == 0) {
+            datSignature = 0x4D544154; // Default "ATMT" signature
+        }
+        outFile.write(reinterpret_cast<const char*>(&datSignature), sizeof(datSignature));
+        
+        // Get item count (items start from ID 100)
+        uint16_t itemCount = static_cast<uint16_t>(Items::getItemTypesCount());
+        // Ensure minimum count of 100 (for IDs 100-199)
+        if (itemCount < 100) {
+            itemCount = 100;
+        }
+        outFile.write(reinterpret_cast<const char*>(&itemCount), sizeof(itemCount));
+        
+        // Write outfit count, effect count, missile count (all 0 for now)
+        uint16_t outfitCount = 0;
+        uint16_t effectCount = 0;
+        uint16_t missileCount = 0;
+        outFile.write(reinterpret_cast<const char*>(&outfitCount), sizeof(outfitCount));
+        outFile.write(reinterpret_cast<const char*>(&effectCount), sizeof(effectCount));
+        outFile.write(reinterpret_cast<const char*>(&missileCount), sizeof(missileCount));
+        
+        // Write items starting from ID 100
+        for (uint16_t id = 100; id < itemCount; ++id) {
+            auto itemType = Items::getItemType(id);
+            if (!itemType) {
+                // Write empty item (just 0xFF terminator)
+                uint8_t terminator = 0xFF;
+                outFile.write(reinterpret_cast<const char*>(&terminator), sizeof(terminator));
+                continue;
+            }
+            
+            // Write flags
+            if (itemType->hasFlag(IS_GROUND)) {
+                uint8_t flag = 0x00;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+                outFile.write(reinterpret_cast<const char*>(&itemType->speed), sizeof(itemType->speed));
+            }
+            if (itemType->category == GROUND_BORDER) {
+                uint8_t flag = 0x01;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->category == BOTTOM) {
+                uint8_t flag = 0x02;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->category == TOP) {
+                uint8_t flag = 0x03;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(IS_CONTAINER)) {
+                uint8_t flag = 0x04;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(STACKABLE)) {
+                uint8_t flag = 0x05;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(FORCE_USE)) {
+                uint8_t flag = 0x06;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(MULTI_USE)) {
+                uint8_t flag = 0x07;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(UNPASSABLE)) {
+                uint8_t flag = 0x0C;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(UNMOVABLE)) {
+                uint8_t flag = 0x0D;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            if (itemType->hasFlag(PICKUPABLE)) {
+                uint8_t flag = 0x10;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+            }
+            
+            // Write market data if name exists
+            if (!itemType->name.empty()) {
+                uint8_t flag = 0x21;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+                uint16_t category = 0;
+                outFile.write(reinterpret_cast<const char*>(&category), sizeof(category));
+                uint16_t tradeAs = id;
+                uint16_t showAs = id;
+                outFile.write(reinterpret_cast<const char*>(&tradeAs), sizeof(tradeAs));
+                outFile.write(reinterpret_cast<const char*>(&showAs), sizeof(showAs));
+                uint16_t nameLength = static_cast<uint16_t>(itemType->name.length());
+                outFile.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
+                outFile.write(itemType->name.c_str(), nameLength);
+                uint16_t restrictVocation = 0;
+                uint16_t requiredLevel = 0;
+                outFile.write(reinterpret_cast<const char*>(&restrictVocation), sizeof(restrictVocation));
+                outFile.write(reinterpret_cast<const char*>(&requiredLevel), sizeof(requiredLevel));
+            }
+            
+            // Write terminator flag
+            uint8_t terminator = 0xFF;
+            outFile.write(reinterpret_cast<const char*>(&terminator), sizeof(terminator));
+            
+            // Write dimensions
+            outFile.write(reinterpret_cast<const char*>(&itemType->width), sizeof(itemType->width));
+            outFile.write(reinterpret_cast<const char*>(&itemType->height), sizeof(itemType->height));
+            
+            // Write exact size if item is larger than 1x1
+            if (itemType->width > 1 || itemType->height > 1) {
+                uint8_t exactSize = 1; // Usually 1 for items
+                outFile.write(reinterpret_cast<const char*>(&exactSize), sizeof(exactSize));
+            }
+            
+            // Validate and clamp pattern/animation values before writing
+            uint8_t layers = (itemType->layers == 0) ? 1 : itemType->layers;
+            uint8_t patternX = (itemType->patternX == 0) ? 1 : itemType->patternX;
+            uint8_t patternY = (itemType->patternY == 0) ? 1 : itemType->patternY;
+            uint8_t patternZ = (itemType->patternZ == 0) ? 1 : itemType->patternZ;
+            uint8_t animationsFrames = (itemType->animationsFrames == 0) ? 1 : itemType->animationsFrames;
+
+            // Write pattern and animation data
+            outFile.write(reinterpret_cast<const char*>(&layers), sizeof(layers));
+            outFile.write(reinterpret_cast<const char*>(&patternX), sizeof(patternX));
+            outFile.write(reinterpret_cast<const char*>(&patternY), sizeof(patternY));
+            outFile.write(reinterpret_cast<const char*>(&patternZ), sizeof(patternZ));
+            outFile.write(reinterpret_cast<const char*>(&animationsFrames), sizeof(animationsFrames));
+            
+            // Write frame durations if needed
+            bool isAnimation = animationsFrames > 1;
+            if (isAnimation && m_assetsInfo.frameDurations) {
+                // Write 6 bytes of padding + 8 bytes per frame
+                uint8_t padding[6] = {0};
+                outFile.write(reinterpret_cast<const char*>(padding), 6);
+                for (uint8_t f = 0; f < animationsFrames; ++f) {
+                    uint64_t duration = 100; // Default 100ms per frame
+                    outFile.write(reinterpret_cast<const char*>(&duration), sizeof(duration));
+                }
+            }
+
+            // Calculate and write sprite IDs in correct order
+            uint32_t numSprites = itemType->width * itemType->height * layers *
+                                 patternX * patternY * patternZ *
+                                 animationsFrames;
+            
+            // Write sprites in the same order as they're stored in textureIdsVector
+            for (uint32_t i = 0; i < numSprites && i < itemType->textureIdsVector.size(); ++i) {
+                uint32_t spriteId = itemType->textureIdsVector[i];
+                if (m_assetsInfo.extended) {
+                    outFile.write(reinterpret_cast<const char*>(&spriteId), sizeof(spriteId));
+                } else {
+                    uint16_t spriteId16 = static_cast<uint16_t>(spriteId);
+                    outFile.write(reinterpret_cast<const char*>(&spriteId16), sizeof(spriteId16));
+                }
+            }
+            
+            // Fill remaining sprites with 0 if vector is smaller than expected
+            for (uint32_t i = itemType->textureIdsVector.size(); i < numSprites; ++i) {
+                if (m_assetsInfo.extended) {
+                    uint32_t zero = 0;
+                    outFile.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+                } else {
+                    uint16_t zero = 0;
+                    outFile.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+                }
+            }
+        }
+        
+        outFile.close();
+        fmt::print("Compiled .dat file successfully: {}\n", decidedPath);
+    } catch (const std::exception& e) {
+        Warninger::sendErrorMsg(FUNC_NAME, "Failed to write .dat file '" + decidedPath + "': " + e.what());
+    }
 }
 
 void AssetsManager::loadOTDat(const std::string &datFilePath) {
@@ -396,44 +621,66 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
         inFile.seekg(6, std::ios_base::cur);
 
         // Read items starting from ID 100
-        for (uint16_t id = 0; id <= itemCount - 100; ++id) {
+        // ObjectBuilder loops from minID to maxID (inclusive): for (id = minID; id <= maxID; id++)
+        // For items: minID = 100, maxID = itemCount
+        // So we load items with IDs 100 through itemCount (inclusive)
+        // That's (itemCount - 100 + 1) items
+        uint32_t itemsToLoad = (itemCount >= 100) ? (itemCount - 100 + 1) : 0;
+        fmt::print("Loading {} items (itemCount={}, IDs 100-{} inclusive)\n", itemsToLoad, itemCount, itemCount);
+        
+        for (uint32_t id = 0; id < itemsToLoad; ++id) {
+            uint32_t actualItemId = id + 100; // Actual item ID in file
             auto itemType = std::make_shared<ItemType>();
+            
+            // Check if file read is still valid
+            if (!inFile.good()) {
+                Warninger::sendErrorMsg(FUNC_NAME, "File read error before item " + std::to_string(id + 100) + ". Stopping load.");
+                break;
+            }
 
             // Read flags until we encounter 0xFF (ItemFlag.LastFlag)
+            // ObjectBuilder always reads flags and texture patterns for every item ID, even if item doesn't exist
             uint8_t flag;
+            bool firstFlag = true;
             while (true) {
                 inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-                //std::cout << "Read flag 0x" << std::hex << (int)flag << " at id " <<  std::dec << id << std::endl;
-                if (flag == 0xFF) break; // LastFlag
+                if (!inFile.good() || inFile.eof()) {
+                    Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading flags at item " + std::to_string(id + 100));
+                    break;
+                }
+                
+                if (flag == 0xFF) {
+                    // LastFlag - if this is the first flag, item doesn't exist, but we still read texture patterns
+                    break;
+                }
+                
+                firstFlag = false;
 
                 switch (flag) {
                     case 0x00: // Ground
-                        //itemType->type = ITEM_TYPE_GROUND;
+                        itemType->setFlag(IS_GROUND, true);
                         inFile.read(reinterpret_cast<char*>(&itemType->speed), sizeof(itemType->speed));
                         break;
                     case 0x01: // GroundBorder
-                        //itemType->hasStackOrder = true;
-                        //itemType->stackOrder = STACK_ORDER_BORDER;
+                        itemType->category = GROUND_BORDER;
                         break;
                     case 0x02: // OnBottom
-                        //itemType->hasStackOrder = true;
-                        //itemType->stackOrder = STACK_ORDER_BOTTOM;
+                        itemType->category = BOTTOM;
                         break;
                     case 0x03: // OnTop
-                        //itemType->hasStackOrder = true;
-                        //itemType->stackOrder = STACK_ORDER_TOP;
+                        itemType->category = TOP;
                         break;
                     case 0x04: // Container
-                        //itemType->type = ITEM_TYPE_CONTAINER;
+                        itemType->setFlag(IS_CONTAINER, true);
                         break;
                     case 0x05: // Stackable
-                        //itemType->stackable = true;
+                        itemType->setFlag(STACKABLE, true);
                         break;
                     case 0x06: // ForceUse
-                        //itemType->forceUse = true;
+                        itemType->setFlag(FORCE_USE, true);
                         break;
                     case 0x07: // MultiUse
-                        //itemType->multiUse = true;
+                        itemType->setFlag(MULTI_USE, true);
                         break;
                     case 0x08: { // Writable
                         //itemType->readable = true;
@@ -454,22 +701,22 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                         //itemType->type = ITEM_TYPE_SPLASH;
                         break;
                     case 0x0C: // Unpassable
-                        //itemType->unpassable = true;
+                        itemType->setFlag(UNPASSABLE, true);
                         break;
                     case 0x0D: // Unmoveable
-                        //itemType->unmoveable = true;
+                        itemType->setFlag(UNMOVABLE, true);
                         break;
                     case 0x0E: // BlockMissiles
-                        //itemType->blockMissiles = true;
+                        itemType->setFlag(BLOCK_MISSILE, true);
                         break;
                     case 0x0F: // BlockPathfinder
-                        //itemType->blockPathfinder = true;
+                        // Not implemented in current flag system
                         break;
 //                    case 0x10: // NoMoveAnimation
 //                        // Not implemented
 //                        break;
                     case 0x10: // Pickupable
-                        //itemType->pickupable = true;
+                        itemType->setFlag(PICKUPABLE, true);
                         break;
                     case 0x11: // Hangable
                         //itemType->hangable = true;
@@ -571,9 +818,29 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                 }
             }
 
-            // Read data
+            // Read texture patterns data (always read, even if item doesn't exist)
+            // ObjectBuilder always reads texture patterns for every item ID, even if item doesn't exist
+            // Check if we can read the dimensions
+            if (!inFile.good() && !inFile.eof()) {
+                Warninger::sendErrorMsg(FUNC_NAME, "File read error before reading dimensions at item " + std::to_string(actualItemId) + ". Pushing empty item.");
+                // Still push empty item to maintain count (ObjectBuilder always pushes)
+                Items::pushItemType(itemType);
+                continue;
+            }
+            
             inFile.read(reinterpret_cast<char*>(&itemType->width), sizeof(itemType->width));
             inFile.read(reinterpret_cast<char*>(&itemType->height), sizeof(itemType->height));
+            
+            if (!inFile.good() && !inFile.eof()) {
+                Warninger::sendErrorMsg(FUNC_NAME, "File read error after reading dimensions at item " + std::to_string(actualItemId) + ". Pushing partial item.");
+                // Still push item to maintain count
+                Items::pushItemType(itemType);
+                continue;
+            }
+
+            // Validate dimensions - ensure they're at least 1
+            if (itemType->width == 0) itemType->width = 1;
+            if (itemType->height == 0) itemType->height = 1;
 
             if (itemType->width > 1 || itemType->height > 1) {
                 inFile.seekg(1, std::ios_base::cur); // Skip exact size
@@ -584,6 +851,22 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             inFile.read(reinterpret_cast<char*>(&itemType->patternY), sizeof(itemType->patternY));
             inFile.read(reinterpret_cast<char*>(&itemType->patternZ), sizeof(itemType->patternZ));
             inFile.read(reinterpret_cast<char*>(&itemType->animationsFrames), sizeof(itemType->animationsFrames));
+            
+            // Validate pattern dimensions - ensure they're at least 1 (for 8.6 protocol, 0 means not used, but we need at least 1 for calculations)
+            // Note: Some items may legitimately have 0 in the file, but we need at least 1 for our indexing calculations
+            if (itemType->layers == 0) itemType->layers = 1;
+            if (itemType->patternX == 0) itemType->patternX = 1;
+            if (itemType->patternY == 0) itemType->patternY = 1;
+            if (itemType->patternZ == 0) itemType->patternZ = 1;
+            if (itemType->animationsFrames == 0) itemType->animationsFrames = 1;
+            
+            // Debug: Log pattern dimensions for first few items to verify reading
+            if (actualItemId <= 105) {
+                fmt::print("Item {}: width={}, height={}, layers={}, patternX={}, patternY={}, patternZ={}, frames={}\n",
+                          actualItemId, itemType->width, itemType->height, itemType->layers,
+                          itemType->patternX, itemType->patternY, itemType->patternZ, itemType->animationsFrames);
+            }
+            
             bool isAnimation = itemType->animationsFrames > 1;
 
             // Skip frame durations if needed
@@ -591,29 +874,50 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                 inFile.seekg(6 + 8 * itemType->animationsFrames, std::ios_base::cur);
             }
 
-            // Calculate number of sprites
+            // Calculate number of sprites (must match getCalcIndexesCount formula)
             uint32_t numSprites = itemType->width * itemType->height * itemType->layers *
                     itemType->patternX * itemType->patternY * itemType->patternZ *
                                   itemType->animationsFrames;
 
-            // Read sprite IDs
-            itemType->textureIdsVector.resize(numSprites);
+            // Resize vector to hold all sprites
+            itemType->textureIdsVector.resize(numSprites, 0);
+            
+            // Read sprite IDs in the order they're stored in the file
+            // Order in file matches getSpriteIndex formula: frame -> patternZ -> patternY -> patternX -> layers -> height -> width
+            // ObjectBuilder uses LITTLE_ENDIAN, so we need to read bytes correctly
             for (uint32_t i = 0; i < numSprites; ++i) {
                 uint32_t spriteId = 0;
                 if (m_assetsInfo.extended) {
-                    uint32_t id32;
-                    inFile.read(reinterpret_cast<char*>(&id32), sizeof(id32));
-                    spriteId = id32;
+                    // Read 32-bit little-endian
+                    uint8_t bytes[4];
+                    inFile.read(reinterpret_cast<char*>(bytes), 4);
+                    if (inFile.gcount() != 4) {
+                        Warninger::sendErrorMsg(FUNC_NAME, "Failed to read sprite ID at item " + std::to_string(actualItemId) + ", sprite " + std::to_string(i));
+                        break; // Stop reading sprites for this item
+                    }
+                    spriteId = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
                 } else {
-                    uint16_t id16;
-                    inFile.read(reinterpret_cast<char*>(&id16), sizeof(id16));
-                    spriteId = id16;
+                    // Read 16-bit little-endian
+                    uint8_t bytes[2];
+                    inFile.read(reinterpret_cast<char*>(bytes), 2);
+                    if (inFile.gcount() != 2) {
+                        Warninger::sendErrorMsg(FUNC_NAME, "Failed to read sprite ID at item " + std::to_string(actualItemId) + ", sprite " + std::to_string(i));
+                        break; // Stop reading sprites for this item
+                    }
+                    spriteId = bytes[0] | (bytes[1] << 8);
                 }
 
                 itemType->textureIdsVector[i] = spriteId;
             }
+            
+            // Check if we successfully read all sprites
+            if (inFile.fail() && !inFile.eof()) {
+                Warninger::sendErrorMsg(FUNC_NAME, "File read error at item " + std::to_string(actualItemId) + ". Pushing partial item.");
+                // Still push the item to maintain count (ObjectBuilder always pushes, even on error)
+            }
 
-            // Store the item
+            // Store the item (ALWAYS push, even if empty/incomplete, to maintain correct count)
+            // ObjectBuilder always pushes an item for every ID from minID to maxID
             Items::pushItemType(itemType);
         }
 
@@ -676,7 +980,32 @@ void AssetsManager::replacePreviewTexture(int itemTypeId, std::shared_ptr<sf::Te
 }
 
 void AssetsManager::createPreviewTexture(int id) {
+    if (!Items::isValidItemTypeIndex(id)) {
+        return;
+    }
+
+    auto it = Items::getItemType(id);
+    if (!it || it->width == 0 || it->height == 0) {
+        // Skip invalid items - set a blank texture instead
+        if (id >= previewTextures.size()) {
+            previewTextures.resize(id + 1);
+        }
+        replacePreviewTexture(id, BLANK_TEXTURE);
+        return;
+    }
+
     auto itemPreviewTexture = getItemSpriteSheet(id, 1);
+    
+    // Check if we got a valid texture
+    if (itemPreviewTexture.getSize().x == 0 || itemPreviewTexture.getSize().y == 0) {
+        // Failed to create sprite sheet, use blank texture
+        if (id >= previewTextures.size()) {
+            previewTextures.resize(id + 1);
+        }
+        replacePreviewTexture(id, BLANK_TEXTURE);
+        return;
+    }
+
     auto finalSprite = sf::Sprite(itemPreviewTexture);
 
     // Scale to the Config defined sprite's desired button size
@@ -688,6 +1017,15 @@ void AssetsManager::createPreviewTexture(int id) {
 
     // Create a new RenderTexture to hold the scaled image
     sf::RenderTexture scaledRender (sf::Vector2u(SizeOfButtonSprite.x, SizeOfButtonSprite.y));
+    if (scaledRender.getSize().x == 0 || scaledRender.getSize().y == 0) {
+        Warninger::sendWarning(FUNC_NAME, "Failed to create scaled RenderTexture for ItemType (" + std::to_string(id) + ")");
+        if (id >= previewTextures.size()) {
+            previewTextures.resize(id + 1);
+        }
+        replacePreviewTexture(id, BLANK_TEXTURE);
+        return;
+    }
+    
     scaledRender.clear(sf::Color::Transparent);
     scaledRender.draw(finalSprite);
     scaledRender.display();
@@ -695,15 +1033,38 @@ void AssetsManager::createPreviewTexture(int id) {
     auto texture = std::make_shared<sf::Texture>(scaledRender.getTexture());
 
     if (id >= previewTextures.size()) {
-        previewTextures.push_back(texture);
-    } else {
-        replacePreviewTexture(id, texture);
+        previewTextures.resize(id + 1);
     }
+    replacePreviewTexture(id, texture);
 }
 
 void AssetsManager::createPreviewTexturesForPage(int pageFirstItemType, int pageLastItemType) {
     for (int id = pageFirstItemType; id <= pageLastItemType; ++id) {
-        createPreviewTexture(id);
+        // Skip if item doesn't exist or is invalid
+        if (!Items::isValidItemTypeIndex(id)) {
+            continue;
+        }
+        
+        auto it = Items::getItemType(id);
+        if (!it || it->width == 0 || it->height == 0) {
+            // Skip invalid items - ensure preview texture vector is large enough
+            if (id >= previewTextures.size()) {
+                previewTextures.resize(id + 1);
+            }
+            replacePreviewTexture(id, BLANK_TEXTURE);
+            continue;
+        }
+        
+        try {
+            createPreviewTexture(id);
+        } catch (const std::exception& e) {
+            Warninger::sendWarning(FUNC_NAME, "Exception creating preview for item " + std::to_string(id) + ": " + e.what());
+            // Set blank texture on error
+            if (id >= previewTextures.size()) {
+                previewTextures.resize(id + 1);
+            }
+            replacePreviewTexture(id, BLANK_TEXTURE);
+        }
     }
 }
 
@@ -724,6 +1085,17 @@ sf::Texture AssetsManager::getItemSpriteSheet(int itemTypeId, int animations) {
         return sf::Texture(*BLANK_TEXTURE);
     }
 
+    // Validate dimensions before creating texture
+    if (it->width == 0 || it->height == 0 || it->width > 255 || it->height > 255) {
+        Warninger::sendWarning(FUNC_NAME, "Invalid dimensions for ItemType (" + std::to_string(itemTypeId) + 
+                               "): width=" + std::to_string(it->width) + ", height=" + std::to_string(it->height));
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+
+    if (animations <= 0) {
+        animations = 1;
+    }
+
     auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
     int singleAnimationFrameSize = it->height * spriteMaxSize;
 
@@ -732,6 +1104,14 @@ sf::Texture AssetsManager::getItemSpriteSheet(int itemTypeId, int animations) {
             static_cast<unsigned>(it->width * spriteMaxSize),
             static_cast<unsigned>(singleAnimationFrameSize * animations)
     };
+    
+    // Additional validation for texture size
+    if (size.x == 0 || size.y == 0 || size.x > 8192 || size.y > 8192) {
+        Warninger::sendWarning(FUNC_NAME, "Invalid texture size for ItemType (" + std::to_string(itemTypeId) + 
+                               "): " + std::to_string(size.x) + "x" + std::to_string(size.y));
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+    
     sf::RenderTexture render(size);
     if (render.getSize().x == 0 || render.getSize().y == 0) {
         Warninger::sendWarning(FUNC_NAME, "Failed to create RenderTexture for ItemType (" + std::to_string(itemTypeId) + ")");
@@ -740,18 +1120,24 @@ sf::Texture AssetsManager::getItemSpriteSheet(int itemTypeId, int animations) {
 
     render.clear(sf::Color::Transparent);
 
+    // Render in the same order as ObjectBuilder: width -> height (for each layer and animation)
+    // Match ObjectBuilder's getBitmapPixels: layers -> width -> height loop
     for (int a = 1; a <= animations; a++) {
-        for (int y = 0; y < it->height; y++) {
-            for (int x = 0; x < it->width; x++) {
-                auto texture = getTexture(getTextureIdFromItemType(it, y, x, a));
+        for (int l = 0; l < it->layers; l++) {
+            for (int w = 0; w < it->width; w++) {
+                for (int h = 0; h < it->height; h++) {
+                    // Match ObjectBuilder's getSpriteIndex(w, h, l, x, 0, 0, 0) parameter order
+                    auto texture = getTexture(getTextureIdFromItemType(it, w, h, a, l, 0, 0, 0));
 
-                if (texture) {
-                    sf::Sprite sprite(*texture);
-                    sprite.setPosition(sf::Vector2f(
-                            static_cast<float>(x * spriteMaxSize),
-                            static_cast<float>(y * spriteMaxSize + ((a - 1) * singleAnimationFrameSize))
-                    ));
-                    render.draw(sprite);
+                    if (texture) {
+                        sf::Sprite sprite(*texture);
+                        // Match ObjectBuilder's flipped positioning: (width - w - 1) and (height - h - 1)
+                        sprite.setPosition(sf::Vector2f(
+                                static_cast<float>((it->width - w - 1) * spriteMaxSize),
+                                static_cast<float>((it->height - h - 1) * spriteMaxSize + ((a - 1) * singleAnimationFrameSize))
+                        ));
+                        render.draw(sprite);
+                    }
                 }
             }
         }
@@ -833,7 +1219,24 @@ void AssetsManager::onGraphicsLoaded(const std::string& loadedPath) {
 void AssetsManager::onDatLoaded(const std::string& loadedPath) {
     fmt::print("Finished loading dat from {}\nTotal: {} itemTypes loaded.\n", loadedPath, Items::getItemTypesCount());
 
-    createPreviewTexturesForPage(0, ConfigManager::getInstance()->getButtonsCountItemPage());
+    // Only create preview textures for valid items
+    // Skip item ID 0 if it's invalid, start from first valid item
+    int firstValidItem = 0;
+    int buttonsPerPage = ConfigManager::getInstance()->getButtonsCountItemPage();
+    
+    // Find first valid item
+    for (uint32_t i = 0; i < Items::getItemTypesCount(); ++i) {
+        auto it = Items::getItemType(i);
+        if (it && it->width > 0 && it->height > 0) {
+            firstValidItem = static_cast<int>(i);
+            break;
+        }
+    }
+    
+    int lastItem = std::min(firstValidItem + buttonsPerPage, static_cast<int>(Items::getItemTypesCount()) - 1);
+    if (firstValidItem <= lastItem) {
+        createPreviewTexturesForPage(firstValidItem, lastItem);
+    }
 
     setDatFileLoaded(true);
 }
