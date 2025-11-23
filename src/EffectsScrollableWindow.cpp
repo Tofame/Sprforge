@@ -42,7 +42,9 @@ bool EffectsScrollableWindow::removeEffectType() {
 void EffectsScrollableWindow::drawEffectTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
     ImGui::Text("Effects list (Max effectType: %d)", (Effects::getEffectTypesCount() > 0 ? (Effects::getEffectTypesCount() - 1) : 0));
-    ImVec2 listSize(250, 500);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("EffectsList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -100,7 +102,10 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
     ImGui::BeginGroup();
     ImVec2 propertiesGroupSize = ImGui::GetItemRectSize();
     ImGui::Text("Properties List");
-    ImGui::BeginChild("PropertiesPanel", ImVec2(450, 500), true);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y;
+    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+    ImGui::BeginChild("PropertiesPanel", panelSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
         ImGui::EndChild();
@@ -277,9 +282,19 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
             isAnimationPlaying = false;
         }
         ImGui::EndTabBar();
-        ImGui::SetCursorPosY(propertiesGroupSize.y - 60);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60);
-        if (ImGui::Button("Save Effect")) {
+        // Save Effect Button - positioned at bottom center
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Center the save button
+        float buttonWidth = 120.0f;
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float offset = (availableWidth - buttonWidth) * 0.5f;
+        if (offset > 0)
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+        
+        if (ImGui::Button("Save Effect", ImVec2(buttonWidth, 0))) {
             if (unsavedEffectType && unsavedEffectTypeId >= 0) {
                 Effects::replaceEffectType(unsavedEffectTypeId, std::make_shared<EffectType>(*unsavedEffectType));
                 assetsManager->createPreviewTexture(unsavedEffectTypeId, ThingCategory::EFFECT);
@@ -298,6 +313,9 @@ void EffectsScrollableWindow::drawPaginationControls() {
     ImGui::BeginGroup();
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
+    
+    // Pagination controls - first row
+    ImGui::BeginGroup();
     if (ImGui::Button("<< Page##EffectTypeListPageDec")) {
         if(getCurrentPage() > 0) {
             setCurrentPage(getCurrentPage() - 1);
@@ -324,6 +342,12 @@ void EffectsScrollableWindow::drawPaginationControls() {
             assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
         }
     }
+    ImGui::EndGroup();
+
+    ImGui::Spacing();
+
+    // Action buttons - second row
+    ImGui::BeginGroup();
     if (ImGui::Button("New Effect##NewEffectTypeFromList")) {
         int index = addEffectType();
         if (index >= 1) {

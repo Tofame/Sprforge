@@ -105,7 +105,9 @@ void ItemsScrollableWindow::drawItemTypeList(sf::Clock& deltaClock) {
 
     ImGui::Text("Items list (Max itemType: %d)", (Items::getItemTypesCount() - 1));
 
-    ImVec2 listSize(250, 500);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("ItemsList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -203,33 +205,34 @@ void ItemsScrollableWindow::drawPaginationControls() {
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
 
-    // Pagination controls
+    // Pagination controls - first row
+    ImGui::BeginGroup();
     if (ImGui::Button("<< Page##ItemTypeListPageDec")) {
         decrementPage();
     }
     ImGui::SameLine();
-
-    // Show the current range of IDs
     ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
     ImGui::SameLine();
-
-    // Input field for navigation with a limited width
-    ImGui::SetNextItemWidth(50); // Set a narrower width for the input field
+    ImGui::SetNextItemWidth(50);
     if (ImGui::InputText("Item Id##ItemTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal  | ImGuiInputTextFlags_EnterReturnsTrue)) {
         int inputId = 0;
         try {
-            inputId = std::stoi(idInputBuffer); // Convert input text to integer
+            inputId = std::stoi(idInputBuffer);
         } catch (...) {
             Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
         }
         selectItem(inputId);
     }
-
     ImGui::SameLine();
     if (ImGui::Button("Page >>##ItemTypeListPageInc")) {
         incrementPage();
     }
+    ImGui::EndGroup();
 
+    ImGui::Spacing();
+
+    // Action buttons - second row
+    ImGui::BeginGroup();
     if (ImGui::Button("New Item##NewItemTypeFromList")) {
         int index = addItemType();
         if (index >= 1) {
@@ -237,7 +240,6 @@ void ItemsScrollableWindow::drawPaginationControls() {
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
-
     ImGui::SameLine();
     if (ImGui::Button("Remove Item##RemoveItemTypeFromList")) {
         bool success = removeItemType();
@@ -245,13 +247,13 @@ void ItemsScrollableWindow::drawPaginationControls() {
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
-
     ImGui::SameLine();
     drawGUIItemTypeExport();
     ImGui::SameLine();
     if (ImGui::Button("Import###ImportItemTypeButton")) {
         handleItemTypeImport();
     }
+    ImGui::EndGroup();
 
     ImGui::EndGroup();
 
@@ -363,7 +365,10 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
     ImGui::Text("Properties List");
 
-    ImGui::BeginChild("PropertiesPanel", ImVec2(450, 500), true);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y;
+    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+    ImGui::BeginChild("PropertiesPanel", panelSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
         ImGui::EndChild();
@@ -714,12 +719,20 @@ void ItemsScrollableWindow::drawItemTypePanel() {
         ImGui::EndTabBar();
     }
 
-    // ------- Save Item Button
-    ImGui::SetCursorPosY(propertiesGroupSize.y - 60); // magic number
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60); // magic number
-
+    // ------- Save Item Button - positioned at bottom center
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Center the save button
+    float buttonWidth = 120.0f;
+    float availableWidth = ImGui::GetContentRegionAvail().x;
+    float offset = (availableWidth - buttonWidth) * 0.5f;
+    if (offset > 0)
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+    
     auto colorsCount = Tools::pushImGuiGray(!assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
-    if (ImGui::Button("Save Item")) {
+    if (ImGui::Button("Save Item", ImVec2(buttonWidth, 0))) {
         triggerItemSavePrompt();
     }
     ImGui::PopStyleColor(colorsCount);

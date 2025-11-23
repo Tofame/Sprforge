@@ -35,8 +35,9 @@ void SpritesScrollableWindow::drawTextureList(sf::Clock& deltaClock) {
 
     ImGui::Text("Sprites list (Max spr: %d)", (assetsManager->getTextureCount() - 1));
 
-    // Create a scrollable panel
-    ImVec2 listSize(250, 500);
+    // Create a scrollable panel - use available space
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("ScrollablePanel", listSize, true, ImGuiWindowFlags_HorizontalScrollbar);
     if(!assetsManager->isGraphicFileLoaded()) {
         ImGui::Text("Need to load .spr!");
@@ -205,33 +206,34 @@ void SpritesScrollableWindow::drawListControlButtons() {
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
 
-    // Pagination controls
+    // Pagination controls - first row
+    ImGui::BeginGroup();
     if (ImGui::Button("<< Page##TextureListPageDec")) {
         decrementPage();
     }
     ImGui::SameLine();
-
-    // Show the current range of IDs
     ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
     ImGui::SameLine();
-
-    // Input field for navigation with a limited width
     ImGui::SetNextItemWidth(50);
     if (ImGui::InputText("Sprite Id##SpriteIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
         int inputId = 0;
         try {
-            inputId = std::stoi(idInputBuffer); // Convert input text to integer
+            inputId = std::stoi(idInputBuffer);
         } catch (...) {
             Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
         }
         selectSprite(inputId, false);
     }
-
     ImGui::SameLine();
     if (ImGui::Button("Page >>##TextureListPageInc")) {
         incrementPage();
     }
+    ImGui::EndGroup();
 
+    ImGui::Spacing();
+
+    // Action buttons - second row
+    ImGui::BeginGroup();
     if (ImGui::Button("Replace##ReplaceInTextureList")) {
         if (!assetsManager->isValidTextureIndex(selectedButtonIndex)) {
             ImGui::OpenPopup("Error Remove/Replace");
@@ -294,6 +296,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
             selectedButtonIndex = assetsManager->getTextureCount() - 1;
         }
     }
+    ImGui::EndGroup();
 
     if (ImGui::BeginPopupModal("Export Sprite Popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Name:");

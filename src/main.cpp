@@ -29,6 +29,8 @@ int main() {
     // Create a single application window
     sf::RenderWindow window(sf::VideoMode({1100, 800}), "Sprforge");
     window.setFramerateLimit(60);
+    // Request focus to prevent focus issues
+    window.requestFocus();
 
     // Setup platform-specific DropManager
 #ifdef _WIN32
@@ -45,6 +47,15 @@ int main() {
         return 1; // Failed to initialize ImGui-SFML
     }
     window.resetGLStates();
+    
+    // Configure ImGui style to reduce "window inside window" appearance
+    ImGuiStyle& style = ImGui::GetStyle();
+    // Reduce window borders and padding for a more integrated look
+    style.WindowBorderSize = 0.0f;
+    style.FrameBorderSize = 0.0f;
+    style.PopupBorderSize = 1.0f; // Keep borders for popups/modals
+    style.WindowRounding = 0.0f;
+    style.FrameRounding = 2.0f;
 
     auto guiHelper = new GUIHelper();
 
@@ -69,7 +80,22 @@ int main() {
 
             // Process SFML events for ImGui-SFML
             ImGui::SFML::ProcessEvent(window, event);
-
+            
+            // Handle focus events to ensure window stays focused
+            // Note: Focus events may vary by SFML version
+            if (event.is<sf::Event::FocusLost>()) {
+                // Window lost focus - could add handling here if needed
+            }
+            else if (event.is<sf::Event::FocusGained>()) {
+                // Window gained focus - ensure it's active
+                window.requestFocus();
+            }
+            // Handle window resize to update viewport for proportional scaling
+            else if (const auto* resizeEvent = event.getIf<sf::Event::Resized>()) {
+                sf::FloatRect visibleArea(sf::Vector2<float>{0.f,0.f}, sf::Vector2<float>{static_cast<float>(resizeEvent->size.x), static_cast<float>(resizeEvent->size.y)});
+                window.setView(sf::View(visibleArea));
+            }
+    
             if (event.is<sf::Event::Closed>()) {
                 if (spritesScrollableWindow.hasUnsavedChanges()) {
                     showExitConfirmation = true;
@@ -130,8 +156,15 @@ int main() {
         }
 
         // Call the update method of the SpritesScrollableWindow
-        ImGui::Begin("Asset Manager");
+        // Make the ImGui window match the SFML window size for proportional scaling
+        sf::Vector2u windowSize = window.getSize();
+        ImGui::SetNextWindowSize(ImVec2(static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)));
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::Begin("Asset Manager", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+        
+        // Header: Toolbar controls
         assetsManager->drawAssetsManagerControls();
+        ImGui::Spacing();
         
         // Category selection tabs
         static int selectedCategory = 0; // 0=Items, 1=Outfits, 2=Effects, 3=Missiles
@@ -155,51 +188,124 @@ int main() {
             ImGui::EndTabBar();
         }
         
-        // Draw appropriate window based on selected category
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Main content area: 30% - 40% - 30% grid layout using columns
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float availableHeight = ImGui::GetContentRegionAvail().y;
+        
+        // Set up three columns with proper widths
+        ImGui::Columns(3, "MainColumns", false);
+        ImGui::SetColumnWidth(0, availableWidth * 0.30f);
+        ImGui::SetColumnWidth(1, availableWidth * 0.40f);
+        ImGui::SetColumnWidth(2, availableWidth * 0.30f);
+        
+        // Column 1: Thing list (30%)
+        ImGui::BeginGroup();
         if (selectedCategory == 0) {
             itemsScrollableWindow.drawItemTypeList(deltaClock);
-            ImGui::SameLine();
-            itemsScrollableWindow.drawItemTypePanel();
         } else if (selectedCategory == 1) {
             outfitsScrollableWindow.drawOutfitTypeList(deltaClock);
-            ImGui::SameLine();
-            outfitsScrollableWindow.drawOutfitTypePanel();
         } else if (selectedCategory == 2) {
             effectsScrollableWindow.drawEffectTypeList(deltaClock);
-            ImGui::SameLine();
-            effectsScrollableWindow.drawEffectTypePanel();
         } else if (selectedCategory == 3) {
             missilesScrollableWindow.drawMissileTypeList(deltaClock);
-            ImGui::SameLine();
+        }
+        
+        // Controls below list (centered)
+        ImGui::Spacing();
+        if (assetsManager->isDatFileLoaded() && assetsManager->isGraphicFileLoaded()) {
+            float columnWidth = ImGui::GetColumnWidth();
+            float columnOffset = ImGui::GetColumnOffset();
+            
+            // Draw controls in an invisible group to measure width
+            ImGui::BeginGroup();
+            if (selectedCategory == 0) {
+                itemsScrollableWindow.drawPaginationControls();
+            } else if (selectedCategory == 1) {
+                outfitsScrollableWindow.drawPaginationControls();
+            } else if (selectedCategory == 2) {
+                effectsScrollableWindow.drawPaginationControls();
+            } else if (selectedCategory == 3) {
+                missilesScrollableWindow.drawPaginationControls();
+            }
+            ImGui::EndGroup();
+            
+            // Center the controls
+            float groupWidth = ImGui::GetItemRectSize().x;
+            float offset = (columnWidth - groupWidth) * 0.5f;
+            if (offset > 0) {
+                ImGui::SetCursorPosX(columnOffset + offset);
+                // Redraw at centered position
+                if (selectedCategory == 0) {
+                    itemsScrollableWindow.drawPaginationControls();
+                } else if (selectedCategory == 1) {
+                    outfitsScrollableWindow.drawPaginationControls();
+                } else if (selectedCategory == 2) {
+                    effectsScrollableWindow.drawPaginationControls();
+                } else if (selectedCategory == 3) {
+                    missilesScrollableWindow.drawPaginationControls();
+                }
+            }
+        }
+        ImGui::EndGroup();
+        
+        // Column 2: Thing properties panel (40%)
+        ImGui::NextColumn();
+        if (selectedCategory == 0) {
+            itemsScrollableWindow.drawItemTypePanel();
+        } else if (selectedCategory == 1) {
+            outfitsScrollableWindow.drawOutfitTypePanel();
+        } else if (selectedCategory == 2) {
+            effectsScrollableWindow.drawEffectTypePanel();
+        } else if (selectedCategory == 3) {
             missilesScrollableWindow.drawMissileTypePanel();
         }
-        ImGui::SameLine();
+        
+        // Column 3: Sprites list (30%)
+        ImGui::NextColumn();
+        ImGui::BeginGroup();
         spritesScrollableWindow.drawTextureList(deltaClock);
-
-        ImGui::Separator();
+        
+        // Controls below sprites list (centered)
+        ImGui::Spacing();
+        if (assetsManager->isGraphicFileLoaded()) {
+            float columnWidth = ImGui::GetColumnWidth();
+            float columnOffset = ImGui::GetColumnOffset();
+            
+            // Draw controls in an invisible group to measure width
+            ImGui::BeginGroup();
+            spritesScrollableWindow.drawListControlButtons();
+            ImGui::EndGroup();
+            
+            // Center the controls
+            float groupWidth = ImGui::GetItemRectSize().x;
+            float offset = (columnWidth - groupWidth) * 0.5f;
+            if (offset > 0) {
+                ImGui::SetCursorPosX(columnOffset + offset);
+                // Redraw at centered position
+                spritesScrollableWindow.drawListControlButtons();
+            }
+        }
+        ImGui::EndGroup();
+        
+        ImGui::Columns(1); // Reset columns
+        
+        // Status message at the bottom (centered)
         if (!assetsManager->isDatFileLoaded() && !assetsManager->isGraphicFileLoaded()) {
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
             const char* text = "Load assets first before buttons can be active.";
-            float windowWidth = ImGui::GetContentRegionAvail().x;
             float textWidth = ImGui::CalcTextSize(text).x;
-
+            float windowWidth = ImGui::GetContentRegionAvail().x;
             float offset = (windowWidth - textWidth) * 0.5f;
             if (offset > 0)
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
-
             ImGui::Text("%s", text);
         }
-        // Draw pagination controls based on selected category
-        if (selectedCategory == 0) {
-            itemsScrollableWindow.drawPaginationControls();
-        } else if (selectedCategory == 1) {
-            outfitsScrollableWindow.drawPaginationControls();
-        } else if (selectedCategory == 2) {
-            effectsScrollableWindow.drawPaginationControls();
-        } else if (selectedCategory == 3) {
-            missilesScrollableWindow.drawPaginationControls();
-        }
-        ImGui::SameLine(600);
-        spritesScrollableWindow.drawListControlButtons();
 
         ImGui::End();
 
