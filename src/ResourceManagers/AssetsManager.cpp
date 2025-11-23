@@ -6,7 +6,7 @@
 
 #include "AssetsManager.h"
 #include "../Helper/SavedData.h"
-#include "misc/cpp/imgui_stdlib.h"
+#include <imgui_stdlib.h>
 #include "../Misc/definitions.h"
 #include "../Misc/Timer.h"
 #include "../Things/Outfits.h"
@@ -1879,7 +1879,7 @@ void AssetsManager::doPopupAssetsCompileAs() {
     ImGui::Spacing();
 
     ImGui::Text("Output Folder:");
-    ImGui::InputText("##OutputPath", &m_assetsInfo.outputPath, m_assetsInfo.outputPath.size());
+    ImGui::InputText("##OutputPath", &m_assetsInfo.outputPath);
     ImGui::SameLine();
     if (ImGui::Button("Browse")) {
         auto selectedFolder = Tools::openFileDialogChooseFolder();

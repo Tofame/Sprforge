@@ -31,7 +31,7 @@ project "sprforge"
         "imgui-sfml",
 
         "fmt",
-        "nativefiledialog-extended",
+        "nfd",
         "tomlplusplus"
     }
 

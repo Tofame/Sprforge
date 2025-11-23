@@ -62,14 +62,24 @@ namespace Tools {
 
         // Create filter items dynamically based on input extensions
         int filtersCount = (int) extensions.size();
-        nfdu8filteritem_t filters[filtersCount];
+        
+        // Store strings to keep them alive (c_str() pointers must remain valid)
+        std::vector<std::string> filterNames;
+        std::vector<std::string> filterSpecs;
+        filterNames.reserve(filtersCount);
+        filterSpecs.reserve(filtersCount);
+        
+        // Use vector instead of VLA (MSVC doesn't support VLAs)
+        std::vector<nfdu8filteritem_t> filters(filtersCount);
         for (int i = 0; i < filtersCount; i++) {
             const auto &ext = extensions[i];
-            filters[i] = {(ext + " Files").c_str(), ext.c_str()};
+            filterNames.push_back(ext + " Files");
+            filterSpecs.push_back(ext);
+            filters[i] = {filterNames[i].c_str(), filterSpecs[i].c_str()};
         }
 
         nfdopendialogu8args_t args = {0};
-        args.filterList = filters;
+        args.filterList = filters.data();
         args.filterCount = filtersCount;
 
         // Open the file dialog
