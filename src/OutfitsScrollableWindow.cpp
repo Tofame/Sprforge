@@ -1,11 +1,11 @@
 #include "OutfitsScrollableWindow.h"
 #include "Misc/definitions.h"
 #include "Misc/Warninger.h"
+#include "Things/ThingCategory.h"
 
 OutfitsScrollableWindow::OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window), assetsManager(am)
+: ThingScrollableWindow(window, am, ThingCategory::OUTFIT)
 {
-    idInputBuffer[0] = '\0';
 }
 
 void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
@@ -56,7 +56,9 @@ void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
     ImGui::Text("Outfits list (Max outfitType: %d)", (Outfits::getOutfitTypesCount() > 0 ? (Outfits::getOutfitTypesCount() - 1) : 0));
 
-    ImVec2 listSize(250, 500);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("OutfitsList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -119,7 +121,10 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
     ImGui::BeginGroup();
     ImVec2 propertiesGroupSize = ImGui::GetItemRectSize();
     ImGui::Text("Properties List");
-    ImGui::BeginChild("PropertiesPanel", ImVec2(450, 500), true);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y;
+    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+    ImGui::BeginChild("PropertiesPanel", panelSize, true);
     
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -430,9 +435,19 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
         }
         ImGui::EndTabBar();
 
-        ImGui::SetCursorPosY(propertiesGroupSize.y - 60);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60);
-        if (ImGui::Button("Save Outfit")) {
+        // Save Outfit Button - positioned at bottom center
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Center the save button
+        float buttonWidth = 120.0f;
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float offset = (availableWidth - buttonWidth) * 0.5f;
+        if (offset > 0)
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+        
+        if (ImGui::Button("Save Outfit", ImVec2(buttonWidth, 0))) {
             if (unsavedOutfitType && unsavedOutfitTypeId >= 0) {
                 Outfits::replaceOutfitType(unsavedOutfitTypeId, std::make_shared<OutfitType>(*unsavedOutfitType));
                 assetsManager->createPreviewTexture(unsavedOutfitTypeId, ThingCategory::OUTFIT);
@@ -445,59 +460,5 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
     ImGui::EndGroup();
 }
 
-void OutfitsScrollableWindow::drawPaginationControls() {
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::BeginDisabled();
-    }
-
-    ImGui::BeginGroup();
-    int startIndex = getPageFirstIndex();
-    int endIndex = getPageLastIndex();
-
-    if (ImGui::Button("<< Page##OutfitTypeListPageDec")) {
-        if(getCurrentPage() > 0) {
-            setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::OUTFIT);
-        }
-    }
-    ImGui::SameLine();
-    ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(50);
-    if (ImGui::InputText("Outfit Id##OutfitTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
-        int inputId = 0;
-        try {
-            inputId = std::stoi(idInputBuffer);
-        } catch (...) {
-            Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
-        }
-        selectOutfit(inputId);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Page >>##OutfitTypeListPageInc")) {
-        if(getPageLastIndex() < getTotalButtons()) {
-            setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::OUTFIT);
-        }
-    }
-
-    if (ImGui::Button("New Outfit##NewOutfitTypeFromList")) {
-        int index = addOutfitType();
-        if (index >= 1) {
-            selectOutfit(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Remove Outfit##RemoveOutfitTypeFromList")) {
-        if(removeOutfitType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-
-    ImGui::EndGroup();
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::EndDisabled();
-    }
-}
+// drawPaginationControls is now inherited from ThingScrollableWindow base class
 

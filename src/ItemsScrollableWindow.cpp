@@ -4,12 +4,11 @@
 #include "Misc/tools.h"
 #include "Things/Item.h"
 #include "Misc/definitions.h"
+#include "Things/ThingCategory.h"
 
 ItemsScrollableWindow::ItemsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window)
+: ThingScrollableWindow(window, am, ThingCategory::ITEM)
 {
-    assetsManager = am;
-
     // Clear search text field, there were weird '??' artifacts sometimes
     idInputBuffer[0] = '\0';
 }
@@ -39,7 +38,19 @@ void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
         return;
     }
 
-    setSelectedButtonIndex(id, goToSelect);
+    int oldPage = getCurrentPage();
+    int newPage = id / ConfigManager::getInstance()->getButtonsCountItemPage();
+    setCurrentPage(newPage);
+    
+    // If page changed, trigger preview generation
+    if (oldPage != newPage) {
+        onPageChanged(oldPage, newPage, false);
+    }
+
+    if(goToSelect) {
+        scrollToButtonIndex = id;
+    }
+    selectedItemIndex = id;
 }
 
 int ItemsScrollableWindow::addItemType() {
@@ -95,7 +106,7 @@ bool ItemsScrollableWindow::removeItemType() {
 
 void ItemsScrollableWindow::onPostItemImport() {
     int newestItemIndex = Items::getItemTypesCount()-1;
-    assetsManager->createPreviewTexture(newestItemIndex);
+    assetsManager->createPreviewTexture(newestItemIndex, ThingCategory::ITEM);
     selectItem(newestItemIndex, true);
 }
 
@@ -105,7 +116,9 @@ void ItemsScrollableWindow::drawItemTypeList(sf::Clock& deltaClock) {
 
     ImGui::Text("Items list (Max itemType: %d)", (Items::getItemTypesCount() - 1));
 
-    ImVec2 listSize(250, 500);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("ItemsList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -203,33 +216,13 @@ void ItemsScrollableWindow::drawPaginationControls() {
     int startIndex = getPageFirstIndex();
     int endIndex = getPageLastIndex();
 
-    // Pagination controls
-    if (ImGui::Button("<< Page##ItemTypeListPageDec")) {
-        decrementPage();
-    }
-    ImGui::SameLine();
+    // Pagination controls - first row (using base class helper)
+    drawPaginationRow(startIndex, endIndex, "Item", "Item Id");
 
-    // Show the current range of IDs
-    ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
-    ImGui::SameLine();
+    ImGui::Spacing();
 
-    // Input field for navigation with a limited width
-    ImGui::SetNextItemWidth(50); // Set a narrower width for the input field
-    if (ImGui::InputText("Item Id##ItemTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal  | ImGuiInputTextFlags_EnterReturnsTrue)) {
-        int inputId = 0;
-        try {
-            inputId = std::stoi(idInputBuffer); // Convert input text to integer
-        } catch (...) {
-            Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
-        }
-        selectItem(inputId);
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Page >>##ItemTypeListPageInc")) {
-        incrementPage();
-    }
-
+    // Action buttons - second row (extended with Export/Import)
+    ImGui::BeginGroup();
     if (ImGui::Button("New Item##NewItemTypeFromList")) {
         int index = addItemType();
         if (index >= 1) {
@@ -237,7 +230,6 @@ void ItemsScrollableWindow::drawPaginationControls() {
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
-
     ImGui::SameLine();
     if (ImGui::Button("Remove Item##RemoveItemTypeFromList")) {
         bool success = removeItemType();
@@ -245,19 +237,73 @@ void ItemsScrollableWindow::drawPaginationControls() {
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
         }
     }
-
     ImGui::SameLine();
     drawGUIItemTypeExport();
     ImGui::SameLine();
     if (ImGui::Button("Import###ImportItemTypeButton")) {
         handleItemTypeImport();
     }
+    ImGui::EndGroup();
 
     ImGui::EndGroup();
 
     if(!assetsManager->isDatFileLoaded()) {
         ImGui::EndDisabled();
     }
+}
+
+bool ItemsScrollableWindow::onPageChange() {
+    if(triggerItemSavePrompt()) {
+        return false;
+    }
+    return true;
+}
+
+void ItemsScrollableWindow::exportItem(Tools::EXPORT_OPTIONS option) {
+    if(!isAnyButtonSelected()) {
+        return;
+    }
+    std::string filePath = (std::filesystem::path(outputFolder) / (Tools::trim(itemName))).string() + Tools::getFormatString(option);
+
+    auto item = Items::getItemType(getSelectedButtonIndex());
+
+    switch(option) {
+        case Tools::PNG:
+        case Tools::BMP:
+        case Tools::JPG:
+            assetsManager->exportTexture(filePath, assetsManager->getItemSpriteSheet(getSelectedButtonIndex(), item->animationsFrames));
+            break;
+        case Tools::TOML:
+            Items::exportItemToml(filePath, getSelectedButtonIndex());
+            break;
+        case Tools::ITF:
+            Items::exportItemItf(filePath, getSelectedButtonIndex());
+            break;
+        default:
+            Items::exportItemItf(filePath, getSelectedButtonIndex());
+            break;
+    }
+}
+
+void ItemsScrollableWindow::setSelectedButtonIndex(int id, bool goToSelect) {
+    if (id < 0 | id > getTotalButtons()) {
+        return;
+    }
+
+    int oldPage = getCurrentPage();
+    int newPage = id / ConfigManager::getInstance()->getButtonsCountItemPage();
+    setCurrentPage(newPage);
+    
+    // If page changed, trigger preview generation
+    // Don't auto-select first item since we're already selecting a specific item
+    if (oldPage != newPage) {
+        onPageChanged(oldPage, newPage, false);
+    }
+
+    if(goToSelect) {
+        scrollToButtonIndex = id;
+    }
+    selectedItemIndex = id;
 }
 
 void ItemsScrollableWindow::drawGUIItemTypeExport() {
@@ -363,7 +409,10 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
     ImGui::Text("Properties List");
 
-    ImGui::BeginChild("PropertiesPanel", ImVec2(450, 500), true);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y;
+    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+    ImGui::BeginChild("PropertiesPanel", panelSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
         ImGui::EndChild();
@@ -406,15 +455,11 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 
                 // Draw transparent/black background to clear previous sprites
                 ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
-                
-                // Render in the same order as ObjectBuilder: layers -> width -> height
-                // Match ObjectBuilder's getBitmapPixels rendering order
+
                 for (int l = 0; l < previewIt->layers; l++) {
                     for(int w = 0; w < previewIt->width; w++) {
                         for(int h = 0; h < previewIt->height; h++) {
-                            // Match ObjectBuilder's getSpriteIndex(w, h, l, x, y, z, f) parameter order
                             // For preview, we use the item's actual pattern values (default to 0 if patternX/Y/Z > 1, otherwise use 0)
-                            // ObjectBuilder shows pattern 0 by default in preview, but we should allow selecting patterns
                             int patternXIdx = 0; // Default to first pattern
                             int patternYIdx = 0;
                             int patternZIdx = 0;
@@ -425,7 +470,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                                 ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
 
                                 auto tempPos = centeredPos;
-                                // Match ObjectBuilder's flipped positioning: (width - w - 1) and (height - h - 1)
+                                // Flipped positioning: (width - w - 1) and (height - h - 1)
                                 // This matches getItemSpriteSheet() which renders correctly in the list
                                 tempPos.x += std::floor((float)(previewIt->width - w - 1) * spriteMaxSize);
                                 tempPos.y += std::floor((float)(previewIt->height - h - 1) * spriteMaxSize);
@@ -449,7 +494,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                                         // These should match where the sprite is rendered
                                         assetsManager->setTextureIdFromItemType(previewIt, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
                                         // Force preview update - use the selected button index
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex());
+                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
                                     }
                                     ImGui::EndDragDropTarget();
                                 }
@@ -714,12 +759,20 @@ void ItemsScrollableWindow::drawItemTypePanel() {
         ImGui::EndTabBar();
     }
 
-    // ------- Save Item Button
-    ImGui::SetCursorPosY(propertiesGroupSize.y - 60); // magic number
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60); // magic number
-
+    // ------- Save Item Button - positioned at bottom center
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Center the save button
+    float buttonWidth = 120.0f;
+    float availableWidth = ImGui::GetContentRegionAvail().x;
+    float offset = (availableWidth - buttonWidth) * 0.5f;
+    if (offset > 0)
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+    
     auto colorsCount = Tools::pushImGuiGray(!assetsManager->hasUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE));
-    if (ImGui::Button("Save Item")) {
+    if (ImGui::Button("Save Item", ImVec2(buttonWidth, 0))) {
         triggerItemSavePrompt();
     }
     ImGui::PopStyleColor(colorsCount);
@@ -742,7 +795,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
             auto replacementItem = std::make_shared<ItemType>(*assetsManager->getUnsavedItemType());
             bool replaceSuccess = Items::replaceItemType(assetsManager->getUnsavedItemTypeId(), replacementItem);
 
-            assetsManager->createPreviewTexture(getSelectedButtonIndex());
+            assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
             assetsManager->resetUnsavedItemType();
 
             selectItem(assetsManager->getLastSelectedItemId(), true);
@@ -752,7 +805,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
         if (ImGui::Button("No")) {
             assetsManager->setUnsavedChanges(CATEGORY_ITEMS_ITEMTYPE, false);
 
-            assetsManager->createPreviewTexture(getSelectedButtonIndex());
+            assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
             assetsManager->resetUnsavedItemType();
 
             selectItem(assetsManager->getLastSelectedItemId(), true);

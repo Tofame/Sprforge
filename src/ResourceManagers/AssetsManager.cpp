@@ -671,7 +671,6 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                    itemCount, outfitCount, effectCount, missileCount);
 
         // Read items starting from ID 100
-        // ObjectBuilder loops from minID to maxID (inclusive): for (id = minID; id <= maxID; id++)
         // For items: minID = 100, maxID = itemCount
         // So we load items with IDs 100 through itemCount (inclusive)
         // That's (itemCount - 100 + 1) items
@@ -689,7 +688,7 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             }
 
             // Read flags until we encounter 0xFF (ItemFlag.LastFlag)
-            // ObjectBuilder always reads flags and texture patterns for every item ID, even if item doesn't exist
+            // always read flags and texture patterns for every item ID, even if item doesn't exist
             uint8_t flag;
             bool firstFlag = true;
             while (true) {
@@ -869,11 +868,11 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             }
 
             // Read texture patterns data (always read, even if item doesn't exist)
-            // ObjectBuilder always reads texture patterns for every item ID, even if item doesn't exist
+            // Always read texture patterns for every item ID, even if item doesn't exist
             // Check if we can read the dimensions
             if (!inFile.good() && !inFile.eof()) {
                 Warninger::sendErrorMsg(FUNC_NAME, "File read error before reading dimensions at item " + std::to_string(actualItemId) + ". Pushing empty item.");
-                // Still push empty item to maintain count (ObjectBuilder always pushes)
+                // Still push empty item to maintain count
                 Items::pushItemType(itemType);
                 continue;
             }
@@ -934,7 +933,6 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             
             // Read sprite IDs in the order they're stored in the file
             // Order in file matches getSpriteIndex formula: frame -> patternZ -> patternY -> patternX -> layers -> height -> width
-            // ObjectBuilder uses LITTLE_ENDIAN, so we need to read bytes correctly
             for (uint32_t i = 0; i < numSprites; ++i) {
                 uint32_t spriteId = 0;
                 if (m_assetsInfo.extended) {
@@ -963,16 +961,14 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
             // Check if we successfully read all sprites
             if (inFile.fail() && !inFile.eof()) {
                 Warninger::sendErrorMsg(FUNC_NAME, "File read error at item " + std::to_string(actualItemId) + ". Pushing partial item.");
-                // Still push the item to maintain count (ObjectBuilder always pushes, even on error)
+                // Still push the item to maintain count
             }
 
             // Store the item (ALWAYS push, even if empty/incomplete, to maintain correct count)
-            // ObjectBuilder always pushes an item for every ID from minID to maxID
             Items::pushItemType(itemType);
         }
 
         // Load outfits (starting from ID 1)
-        // ObjectBuilder loops from minID to maxID (inclusive): for (id = minID; id <= maxID; id++)
         // For outfits: minID = 1, maxID = outfitCount
         // So we load outfits with IDs 1 through outfitCount (inclusive)
         for (uint32_t id = 1; id <= outfitCount; ++id) {

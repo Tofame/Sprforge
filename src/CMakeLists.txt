@@ -27,6 +27,8 @@ add_executable(Sprforge main.cpp
         Things/MissileType.h
         Things/Missiles.cpp
         Things/Missiles.h
+        ThingScrollableWindow.h
+        ThingScrollableWindow.cpp
         ItemsScrollableWindow.h
         ItemsScrollableWindow.cpp
         OutfitsScrollableWindow.h

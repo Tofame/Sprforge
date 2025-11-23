@@ -1,11 +1,11 @@
 #include "MissilesScrollableWindow.h"
 #include "Misc/definitions.h"
 #include "Misc/Warninger.h"
+#include "Things/ThingCategory.h"
 
 MissilesScrollableWindow::MissilesScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window), assetsManager(am)
+: ThingScrollableWindow(window, am, ThingCategory::MISSILE)
 {
-    idInputBuffer[0] = '\0';
 }
 
 void MissilesScrollableWindow::selectMissile(int id, bool goToSelect) {
@@ -42,7 +42,9 @@ bool MissilesScrollableWindow::removeMissileType() {
 void MissilesScrollableWindow::drawMissileTypeList(sf::Clock& deltaClock) {
     ImGui::BeginGroup();
     ImGui::Text("Missiles list (Max missileType: %d)", (Missiles::getMissileTypesCount() > 0 ? (Missiles::getMissileTypesCount() - 1) : 0));
-    ImVec2 listSize(250, 500);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
     ImGui::BeginChild("MissilesList", listSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
@@ -100,7 +102,10 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
     ImGui::BeginGroup();
     ImVec2 propertiesGroupSize = ImGui::GetItemRectSize();
     ImGui::Text("Properties List");
-    ImGui::BeginChild("PropertiesPanel", ImVec2(450, 500), true);
+    // Use available space instead of fixed size
+    float availableHeight = ImGui::GetContentRegionAvail().y;
+    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+    ImGui::BeginChild("PropertiesPanel", panelSize, true);
     if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
         ImGui::Text("Need to load .dat and .spr!");
         ImGui::EndChild();
@@ -385,9 +390,19 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
             isAnimationPlaying = false;
         }
         ImGui::EndTabBar();
-        ImGui::SetCursorPosY(propertiesGroupSize.y - 60);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + propertiesGroupSize.x - 60);
-        if (ImGui::Button("Save Missile")) {
+        // Save Missile Button - positioned at bottom center
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Center the save button
+        float buttonWidth = 120.0f;
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float offset = (availableWidth - buttonWidth) * 0.5f;
+        if (offset > 0)
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+        
+        if (ImGui::Button("Save Missile", ImVec2(buttonWidth, 0))) {
             if (unsavedMissileType && unsavedMissileTypeId >= 0) {
                 Missiles::replaceMissileType(unsavedMissileTypeId, std::make_shared<MissileType>(*unsavedMissileType));
                 assetsManager->createPreviewTexture(unsavedMissileTypeId, ThingCategory::MISSILE);
@@ -399,55 +414,5 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
     ImGui::EndGroup();
 }
 
-void MissilesScrollableWindow::drawPaginationControls() {
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::BeginGroup();
-    int startIndex = getPageFirstIndex();
-    int endIndex = getPageLastIndex();
-    if (ImGui::Button("<< Page##MissileTypeListPageDec")) {
-        if(getCurrentPage() > 0) {
-            setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
-        }
-    }
-    ImGui::SameLine();
-    ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(50);
-    if (ImGui::InputText("Missile Id##MissileTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
-        int inputId = 0;
-        try {
-            inputId = std::stoi(idInputBuffer);
-        } catch (...) {
-            Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
-        }
-        selectMissile(inputId);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Page >>##MissileTypeListPageInc")) {
-        if(getPageLastIndex() < getTotalButtons()) {
-            setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::MISSILE);
-        }
-    }
-    if (ImGui::Button("New Missile##NewMissileTypeFromList")) {
-        int index = addMissileType();
-        if (index >= 1) {
-            selectMissile(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Remove Missile##RemoveMissileTypeFromList")) {
-        if(removeMissileType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::EndGroup();
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::EndDisabled();
-    }
-}
+// drawPaginationControls is now inherited from ThingScrollableWindow base class
 
