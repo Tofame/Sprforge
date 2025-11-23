@@ -1,0 +1,12 @@
+{
+  "name": "sprforge",
+  "version": "1.0.0",
+  "dependencies": [
+    "sfml",
+    "imgui",
+    "imgui-sfml",
+    "nativefiledialog-extended",
+    "tomlplusplus",
+    "fmt"
+  ]
+}
