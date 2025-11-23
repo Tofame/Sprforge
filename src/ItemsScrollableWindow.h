@@ -3,13 +3,28 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-#include "ResourceManagers/AssetsManager.h"
+#include "ThingScrollableWindow.h"
 #include "Things/Items.h"
 #include "Misc/tools.h"
 
-class ItemsScrollableWindow {
+class ItemsScrollableWindow : public ThingScrollableWindow {
 public:
     ItemsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    
+    // Implement pure virtual methods from base class
+    void drawTypeList(sf::Clock& deltaClock) override { drawItemTypeList(deltaClock); }
+    void drawTypePanel() override { drawItemTypePanel(); }
+    void selectType(int id, bool goToSelect = true) override { selectItem(id, goToSelect); }
+    int addType() override { return addItemType(); }
+    bool removeType() override { return removeItemType(); }
+    
+    // Override drawPaginationControls to add Export/Import buttons
+    void drawPaginationControls() override;
+    
+    // Override onPageChange to check for unsaved changes
+    bool onPageChange() override;
+    
+    // Type-specific methods (wrappers for base class virtual methods)
     void drawItemTypeList(sf::Clock& deltaClock);
     void drawItemTypePanel();
 
@@ -46,89 +61,28 @@ public:
         return false;
     }
 
-    // ItemType list button methods
-    int getTotalButtons() {
+    // Override base class methods
+    int getTotalButtons() const override {
         return (int)Items::getItemTypesCount();
     }
-    int getSelectedButtonIndex() {
+    int getSelectedButtonIndex() override {
         return selectedItemIndex;
     }
-    int isAnyButtonSelected() {
+    bool isAnyButtonSelected() override {
         return selectedItemIndex >= 0 && selectedItemIndex < Items::getItemTypesCount();
     }
-    void setSelectedButtonIndex(int id, bool goToSelect = true) {
-        if (id < 0 | id > getTotalButtons()) {
-            return;
-        }
-
-        int oldPage = getCurrentPage();
-        int newPage = id / ConfigManager::getInstance()->getButtonsCountItemPage();
-        setCurrentPage(newPage);
-        
-        // If page changed, trigger preview generation
-        // Don't auto-select first item since we're already selecting a specific item
-        if (oldPage != newPage) {
-            onPageChanged(oldPage, newPage, false);
-        }
-
-        if(goToSelect) {
-            scrollToButtonIndex = id;
-        }
-        selectedItemIndex = id;
-    }
-
-    // Pagination methods
-    void drawPaginationControls();
-    int getPageFirstIndex() {
-        return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage();;
-    }
-    int getPageLastIndex() {
-        return std::min(getPageFirstIndex() + ConfigManager::getInstance()->getButtonsCountItemPage(), getTotalButtons());
-    }
+    
+    // Items-specific pagination methods
     int getLastPageNumber() {
-        return (getTotalButtons() - 1) / ConfigManager::getInstance()->getButtonsCountItemPage();;
+        return (getTotalButtons() - 1) / ConfigManager::getInstance()->getButtonsCountItemPage();
     }
-    void incrementPage() {
-        if(!onPageChange()) {
-            return;
-        }
-
-        if(getPageLastIndex() >= getTotalButtons()) {
-            return;
-        }
-
-        int oldPage = getCurrentPage();
-        setCurrentPage(oldPage + 1);
-        onPageChanged(oldPage, getCurrentPage());
-    }
-    void decrementPage() {
-        if(!onPageChange()) {
-            return;
-        }
-
-        if(getCurrentPage() <= 0) {
-            return;
-        }
-
-        int oldPage = getCurrentPage();
-        setCurrentPage(oldPage - 1);
-        onPageChanged(oldPage, getCurrentPage());
-    }
-    // True -> you can change page
-    bool onPageChange() {
-        if(triggerItemSavePrompt()) {
-            return false;
-        }
-
-        return true;
-    }
-    void onPageChanged(int oldPage, int newPage, bool autoSelectFirst = true) {
+    void onPageChanged(int oldPage, int newPage, bool autoSelectFirst = true) override {
         if(oldPage == newPage) {
             return;
         }
 
         // Load preview textures for current page
-        assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex());
+        assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::ITEM);
 
         // Only auto-select first item if requested (e.g., from page navigation buttons)
         // Don't auto-select when called from search box (we already have a selected item)
@@ -137,60 +91,17 @@ public:
         }
     }
 
-    void exportItem(Tools::EXPORT_OPTIONS option) {
-        if(!isAnyButtonSelected()) {
-            return;
-        }
-        std::string filePath = (std::filesystem::path(outputFolder) / (Tools::trim(itemName))).string() + getFormatString(option);
-
-        auto item = Items::getItemType(getSelectedButtonIndex());
-
-        switch(option) {
-            case Tools::PNG:
-            case Tools::BMP:
-            case Tools::JPG:
-                assetsManager->exportTexture(filePath, assetsManager->getItemSpriteSheet(getSelectedButtonIndex(), item->animationsFrames));
-                break;
-            case Tools::TOML:
-                Items::exportItemToml(filePath, getSelectedButtonIndex());
-                break;
-            case Tools::ITF:
-                Items::exportItemItf(filePath, getSelectedButtonIndex());
-                break;
-            default:
-                Items::exportItemItf(filePath, getSelectedButtonIndex());
-                break;
-        }
-    }
-
-    int getCurrentPage() {
-        return currentPage;
-    }
-    void setCurrentPage(int _newPage) {
-        currentPage = _newPage;
-    }
+    void exportItem(Tools::EXPORT_OPTIONS option);
+    void setSelectedButtonIndex(int id, bool goToSelect = true);
+    
 private:
-    sf::RenderWindow& window;
-    AssetsManager* assetsManager;
-    Items* items;
-
-    int currentPage = 0;
-    int scrollToButtonIndex = -1;
     inline static int selectedItemIndex = -1;
-
-    char idInputBuffer[10]; // the value of input for searching ItemType on the list
-    bool drawGrid = true;
-
     bool shouldOpenUnsavedPopup = false; // for "Save" changed itemType popup
-
-    // Animation playback
-    bool isAnimationPlaying = false;
-    sf::Clock animationClock;
 
     // Variables for export
     std::string outputFolder = Tools::getDesktopPath();
     int exportFormatSelected = 0; // 0 = PNG, 1 = BMP, 2 = JPG, 3 = ITF, 4 = TOML
-    std::string itemName = "item" + std::to_string(getSelectedButtonIndex());
+    std::string itemName;
 
     uint32_t rightMenuClickedItem = 0;
 

@@ -169,10 +169,7 @@ public:
      * @brief Gets you texture id from a ThingType
      *
      * Every ThingType can be composed of more than 1 texture.
-     * The sprite index is calculated using the Tibia .dat format order (matching ObjectBuilder):
      * spriteIndex = (((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
-     *
-     * Note: Parameters match ObjectBuilder's getSpriteIndex(w, h, l, px, py, pz, f) order
      *
      * @param thingType thingType from which we will get basic information
      * @param w cell's 'width' (0-based) - X coordinate

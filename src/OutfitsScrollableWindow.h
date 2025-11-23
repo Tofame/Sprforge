@@ -3,49 +3,40 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-#include "ResourceManagers/AssetsManager.h"
+#include "ThingScrollableWindow.h"
 #include "Things/Outfits.h"
 #include "Things/ThingType.h"
 #include "Misc/tools.h"
 
-class OutfitsScrollableWindow {
+class OutfitsScrollableWindow : public ThingScrollableWindow {
 public:
     OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    
+    // Implement pure virtual methods from base class
+    void drawTypeList(sf::Clock& deltaClock) override { drawOutfitTypeList(deltaClock); }
+    void drawTypePanel() override { drawOutfitTypePanel(); }
+    void selectType(int id, bool goToSelect = true) override { selectOutfit(id, goToSelect); }
+    int addType() override { return addOutfitType(); }
+    bool removeType() override { return removeOutfitType(); }
+    
+    // Type-specific methods (wrappers for base class virtual methods)
     void drawOutfitTypeList(sf::Clock& deltaClock);
     void drawOutfitTypePanel();
-    void drawPaginationControls();
-
     void selectOutfit(int id, bool goToSelect = true);
     int addOutfitType();
     bool removeOutfitType();
 
-    int getTotalButtons() { return (int)Outfits::getOutfitTypesCount(); }
-    int getSelectedButtonIndex() { return selectedOutfitIndex; }
-    bool isAnyButtonSelected() { return selectedOutfitIndex >= 0 && selectedOutfitIndex < Outfits::getOutfitTypesCount(); }
+    // Override base class methods
+    int getTotalButtons() const override { return (int)Outfits::getOutfitTypesCount(); }
+    int getSelectedButtonIndex() override { return selectedOutfitIndex; }
+    bool isAnyButtonSelected() override { return selectedOutfitIndex >= 0 && selectedOutfitIndex < Outfits::getOutfitTypesCount(); }
 
 private:
-    sf::RenderWindow& window;
-    AssetsManager* assetsManager;
-
-    int currentPage = 0;
-    int scrollToButtonIndex = -1;
     inline static int selectedOutfitIndex = -1;
-
-    char idInputBuffer[10];
-    bool drawGrid = true;
     std::shared_ptr<OutfitType> unsavedOutfitType;
     int unsavedOutfitTypeId = -1;
-
-    // Animation playback
-    bool isAnimationPlaying = false;
-    sf::Clock animationClock;
-
+    
     // Direction selection (0=North, 1=East, 2=South, 3=West)
     int selectedDirection = 0;
-
-    int getCurrentPage() { return currentPage; }
-    void setCurrentPage(int page) { currentPage = page; }
-    int getPageFirstIndex() { return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage(); }
-    int getPageLastIndex() { return std::min(getPageFirstIndex() + ConfigManager::getInstance()->getButtonsCountItemPage(), getTotalButtons()); }
 };
 

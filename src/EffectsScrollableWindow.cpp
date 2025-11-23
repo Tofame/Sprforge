@@ -1,11 +1,11 @@
 #include "EffectsScrollableWindow.h"
 #include "Misc/definitions.h"
 #include "Misc/Warninger.h"
+#include "Things/ThingCategory.h"
 
 EffectsScrollableWindow::EffectsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window), assetsManager(am)
+: ThingScrollableWindow(window, am, ThingCategory::EFFECT)
 {
-    idInputBuffer[0] = '\0';
 }
 
 void EffectsScrollableWindow::selectEffect(int id, bool goToSelect) {
@@ -306,64 +306,5 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
     ImGui::EndGroup();
 }
 
-void EffectsScrollableWindow::drawPaginationControls() {
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::BeginGroup();
-    int startIndex = getPageFirstIndex();
-    int endIndex = getPageLastIndex();
-    
-    // Pagination controls - first row
-    ImGui::BeginGroup();
-    if (ImGui::Button("<< Page##EffectTypeListPageDec")) {
-        if(getCurrentPage() > 0) {
-            setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
-        }
-    }
-    ImGui::SameLine();
-    ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(50);
-    if (ImGui::InputText("Effect Id##EffectTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
-        int inputId = 0;
-        try {
-            inputId = std::stoi(idInputBuffer);
-        } catch (...) {
-            Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
-        }
-        selectEffect(inputId);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Page >>##EffectTypeListPageInc")) {
-        if(getPageLastIndex() < getTotalButtons()) {
-            setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::EFFECT);
-        }
-    }
-    ImGui::EndGroup();
-
-    ImGui::Spacing();
-
-    // Action buttons - second row
-    ImGui::BeginGroup();
-    if (ImGui::Button("New Effect##NewEffectTypeFromList")) {
-        int index = addEffectType();
-        if (index >= 1) {
-            selectEffect(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Remove Effect##RemoveEffectTypeFromList")) {
-        if(removeEffectType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::EndGroup();
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::EndDisabled();
-    }
-}
+// drawPaginationControls is now inherited from ThingScrollableWindow base class
 

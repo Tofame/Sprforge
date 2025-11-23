@@ -232,23 +232,6 @@ int main() {
                 missilesScrollableWindow.drawPaginationControls();
             }
             ImGui::EndGroup();
-            
-            // Center the controls
-            float groupWidth = ImGui::GetItemRectSize().x;
-            float offset = (columnWidth - groupWidth) * 0.5f;
-            if (offset > 0) {
-                ImGui::SetCursorPosX(columnOffset + offset);
-                // Redraw at centered position
-                if (selectedCategory == 0) {
-                    itemsScrollableWindow.drawPaginationControls();
-                } else if (selectedCategory == 1) {
-                    outfitsScrollableWindow.drawPaginationControls();
-                } else if (selectedCategory == 2) {
-                    effectsScrollableWindow.drawPaginationControls();
-                } else if (selectedCategory == 3) {
-                    missilesScrollableWindow.drawPaginationControls();
-                }
-            }
         }
         ImGui::EndGroup();
         
@@ -279,15 +262,6 @@ int main() {
             ImGui::BeginGroup();
             spritesScrollableWindow.drawListControlButtons();
             ImGui::EndGroup();
-            
-            // Center the controls
-            float groupWidth = ImGui::GetItemRectSize().x;
-            float offset = (columnWidth - groupWidth) * 0.5f;
-            if (offset > 0) {
-                ImGui::SetCursorPosX(columnOffset + offset);
-                // Redraw at centered position
-                spritesScrollableWindow.drawListControlButtons();
-            }
         }
         ImGui::EndGroup();
         

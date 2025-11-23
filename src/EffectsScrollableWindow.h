@@ -3,46 +3,37 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-#include "ResourceManagers/AssetsManager.h"
+#include "ThingScrollableWindow.h"
 #include "Things/Effects.h"
 #include "Things/ThingType.h"
 #include "Misc/tools.h"
 
-class EffectsScrollableWindow {
+class EffectsScrollableWindow : public ThingScrollableWindow {
 public:
     EffectsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    
+    // Implement pure virtual methods from base class
+    void drawTypeList(sf::Clock& deltaClock) override { drawEffectTypeList(deltaClock); }
+    void drawTypePanel() override { drawEffectTypePanel(); }
+    void selectType(int id, bool goToSelect = true) override { selectEffect(id, goToSelect); }
+    int addType() override { return addEffectType(); }
+    bool removeType() override { return removeEffectType(); }
+    
+    // Type-specific methods (wrappers for base class virtual methods)
     void drawEffectTypeList(sf::Clock& deltaClock);
     void drawEffectTypePanel();
-    void drawPaginationControls();
-
     void selectEffect(int id, bool goToSelect = true);
     int addEffectType();
     bool removeEffectType();
 
-    int getTotalButtons() { return (int)Effects::getEffectTypesCount(); }
-    int getSelectedButtonIndex() { return selectedEffectIndex; }
-    bool isAnyButtonSelected() { return selectedEffectIndex >= 0 && selectedEffectIndex < Effects::getEffectTypesCount(); }
+    // Override base class methods
+    int getTotalButtons() const override { return (int)Effects::getEffectTypesCount(); }
+    int getSelectedButtonIndex() override { return selectedEffectIndex; }
+    bool isAnyButtonSelected() override { return selectedEffectIndex >= 0 && selectedEffectIndex < Effects::getEffectTypesCount(); }
 
 private:
-    sf::RenderWindow& window;
-    AssetsManager* assetsManager;
-
-    int currentPage = 0;
-    int scrollToButtonIndex = -1;
     inline static int selectedEffectIndex = -1;
-
-    char idInputBuffer[10];
-    bool drawGrid = true;
     std::shared_ptr<EffectType> unsavedEffectType;
     int unsavedEffectTypeId = -1;
-
-    // Animation playback
-    bool isAnimationPlaying = false;
-    sf::Clock animationClock;
-
-    int getCurrentPage() { return currentPage; }
-    void setCurrentPage(int page) { currentPage = page; }
-    int getPageFirstIndex() { return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage(); }
-    int getPageLastIndex() { return std::min(getPageFirstIndex() + ConfigManager::getInstance()->getButtonsCountItemPage(), getTotalButtons()); }
 };
 

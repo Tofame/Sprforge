@@ -3,46 +3,37 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
-#include "ResourceManagers/AssetsManager.h"
+#include "ThingScrollableWindow.h"
 #include "Things/Missiles.h"
 #include "Things/ThingType.h"
 #include "Misc/tools.h"
 
-class MissilesScrollableWindow {
+class MissilesScrollableWindow : public ThingScrollableWindow {
 public:
     MissilesScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    
+    // Implement pure virtual methods from base class
+    void drawTypeList(sf::Clock& deltaClock) override { drawMissileTypeList(deltaClock); }
+    void drawTypePanel() override { drawMissileTypePanel(); }
+    void selectType(int id, bool goToSelect = true) override { selectMissile(id, goToSelect); }
+    int addType() override { return addMissileType(); }
+    bool removeType() override { return removeMissileType(); }
+    
+    // Type-specific methods (wrappers for base class virtual methods)
     void drawMissileTypeList(sf::Clock& deltaClock);
     void drawMissileTypePanel();
-    void drawPaginationControls();
-
     void selectMissile(int id, bool goToSelect = true);
     int addMissileType();
     bool removeMissileType();
 
-    int getTotalButtons() { return (int)Missiles::getMissileTypesCount(); }
-    int getSelectedButtonIndex() { return selectedMissileIndex; }
-    bool isAnyButtonSelected() { return selectedMissileIndex >= 0 && selectedMissileIndex < Missiles::getMissileTypesCount(); }
+    // Override base class methods
+    int getTotalButtons() const override { return (int)Missiles::getMissileTypesCount(); }
+    int getSelectedButtonIndex() override { return selectedMissileIndex; }
+    bool isAnyButtonSelected() override { return selectedMissileIndex >= 0 && selectedMissileIndex < Missiles::getMissileTypesCount(); }
 
 private:
-    sf::RenderWindow& window;
-    AssetsManager* assetsManager;
-
-    int currentPage = 0;
-    int scrollToButtonIndex = -1;
     inline static int selectedMissileIndex = -1;
-
-    char idInputBuffer[10];
-    bool drawGrid = true;
     std::shared_ptr<MissileType> unsavedMissileType;
     int unsavedMissileTypeId = -1;
-
-    // Animation playback
-    bool isAnimationPlaying = false;
-    sf::Clock animationClock;
-
-    int getCurrentPage() { return currentPage; }
-    void setCurrentPage(int page) { currentPage = page; }
-    int getPageFirstIndex() { return getCurrentPage() * ConfigManager::getInstance()->getButtonsCountItemPage(); }
-    int getPageLastIndex() { return std::min(getPageFirstIndex() + ConfigManager::getInstance()->getButtonsCountItemPage(), getTotalButtons()); }
 };
 

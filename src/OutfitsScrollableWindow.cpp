@@ -1,11 +1,11 @@
 #include "OutfitsScrollableWindow.h"
 #include "Misc/definitions.h"
 #include "Misc/Warninger.h"
+#include "Things/ThingCategory.h"
 
 OutfitsScrollableWindow::OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window), assetsManager(am)
+: ThingScrollableWindow(window, am, ThingCategory::OUTFIT)
 {
-    idInputBuffer[0] = '\0';
 }
 
 void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
@@ -460,67 +460,5 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
     ImGui::EndGroup();
 }
 
-void OutfitsScrollableWindow::drawPaginationControls() {
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::BeginDisabled();
-    }
-
-    ImGui::BeginGroup();
-    int startIndex = getPageFirstIndex();
-    int endIndex = getPageLastIndex();
-
-    // Pagination controls - first row
-    ImGui::BeginGroup();
-    if (ImGui::Button("<< Page##OutfitTypeListPageDec")) {
-        if(getCurrentPage() > 0) {
-            setCurrentPage(getCurrentPage() - 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex(), ThingCategory::OUTFIT);
-        }
-    }
-    ImGui::SameLine();
-    ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(50);
-    if (ImGui::InputText("Outfit Id##OutfitTypeIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
-        int inputId = 0;
-        try {
-            inputId = std::stoi(idInputBuffer);
-        } catch (...) {
-            Warninger::sendWarning(FUNC_NAME, "Cannot convert input to a number");
-        }
-        selectOutfit(inputId);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Page >>##OutfitTypeListPageInc")) {
-        if(getPageLastIndex() < getTotalButtons()) {
-            setCurrentPage(getCurrentPage() + 1);
-            assetsManager->createPreviewTexturesForPage(getPageFirstIndex(), getPageLastIndex() - 1, ThingCategory::OUTFIT);
-        }
-    }
-    ImGui::EndGroup();
-
-    ImGui::Spacing();
-
-    // Action buttons - second row
-    ImGui::BeginGroup();
-    if (ImGui::Button("New Outfit##NewOutfitTypeFromList")) {
-        int index = addOutfitType();
-        if (index >= 1) {
-            selectOutfit(index - 1);
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Remove Outfit##RemoveOutfitTypeFromList")) {
-        if(removeOutfitType()) {
-            assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-        }
-    }
-    ImGui::EndGroup();
-
-    ImGui::EndGroup();
-    if(!assetsManager->isDatFileLoaded()) {
-        ImGui::EndDisabled();
-    }
-}
+// drawPaginationControls is now inherited from ThingScrollableWindow base class
 
