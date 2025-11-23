@@ -1,19 +1,23 @@
-What is Tofame's 'Sprforge' Asset Editor?
+What is Tofame's 'SprForge' Asset Editor?
 ----
 
-Just as name suggests, Sprforge is an Asset Editor allowing for creation/load of graphical assets and compiling them into a single binary file(s), such as `.spr` and `.dat`. 
-As long as your client reads them, you can edit or add new items, {outfits, effects or missiles are WIP} and see them in your game.
+Just as name suggests, SprForge is an Asset Editor allowing for creation/load of graphical assets and compiling them into a single binary file(s), such as `.spr` and `.dat`. 
+
+What is ``.spr`` - it is a file containing graphics, compressed to remain low sized.
+What is ``.dat`` - it is a file containing game data for items, outfits, effects and missiles. For instance, it decides the items properties - isGround, isStackable etc.
+
+Currently both of those formats are based on how [Object Builder](https://github.com/punkice3407/ObjectBuilder) and other similar tools load/compile those files, in order to be compatible with game engines/clients. However, my end goal plan, is to create my own formats, that will be more efficient.
+
 
 Some features:
-
 * Very versatile config file, allowing for customization of app functionality such as Sprites List etc.
 * Support animation frames, item width and height bigger than 1x1
 * A lot of import/export options, such as:
   * Graphical: `.png`, `.bmp`, `.jpg`
   * ItemType Data: `.itf` (my own binary format), `.toml`
 
-* Load OTs `.spr`, compile `.spr`
-* Load OTS `.dat`, compiling OTDat is WIP
+* Load and compiling `.spr` (compiling untested, always do backup!)
+* Load `.dat` (compiling unfinished)
 
 Image
 ----
@@ -24,7 +28,7 @@ Compiling in Windows
 ----
 
 It is compillable in CLion.
-* You have to set working directory in run setup to be the folder Sprforge/ as this is where data/ and config.toml is.
+* You have to set working directory in run setup to be the folder SprForge/ as this is where data/ and config.toml is.
 
 Uses CMake's fetch content to get most of the required libs.
 The libs you need to get/update on your own:
