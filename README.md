@@ -22,7 +22,8 @@ Some features:
 Image
 ----
 
-<img width="1004" height="669" alt="obraz" src="https://github.com/user-attachments/assets/8acb6ed4-6221-4bca-b691-ee625dc56764" />
+<img width="620" height="480" alt="image" src="https://github.com/user-attachments/assets/21e918d1-29e6-48af-b6a1-c35802dffcad" />
+
 
 Compiling in Windows
 ----
