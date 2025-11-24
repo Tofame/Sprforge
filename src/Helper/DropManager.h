@@ -7,6 +7,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <oleidl.h>
+#include <shellapi.h>
 #endif
 
 // Platform-agnostic DropManager class

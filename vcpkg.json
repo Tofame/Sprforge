@@ -14,7 +14,8 @@
     "fmt",
     "tomlplusplus",
     "nativefiledialog-extended",
-    "stb"
+    "stb",
+	"imgui"
   ]
 }
 

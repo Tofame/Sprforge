@@ -12,7 +12,7 @@ workspace "Sprforge"
 
 -- Project configuration ----------------------------------------------------
 project "Sprforge"
-    kind "WindowedApp"
+    kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
     targetdir ("bin/%{cfg.buildcfg}")
@@ -20,9 +20,12 @@ project "Sprforge"
     flags { "MultiProcessorCompile" }
 
     files {
-        "**.cpp",
-        "**.h"
+        "src/**.cpp",
+        "src/**.h"
     }
+    
+    -- Exclude imgui_backends.cpp if it exists (vcpkg handles backends)
+    removefiles { "src/imgui_backends.cpp" }
 
     defines { "IMGUI_IMPL_OPENGL_LOADER_GLAD" }
 
@@ -32,7 +35,7 @@ project "Sprforge"
             VcpkgEnableManifest = "true"
         }
 		buildoptions { "/bigobj", "/utf-8" }
-        defines { "NOMINMAX" }
+        defines { "NOMINMAX", "_WIN32", "WIN32", "_WINDOWS" }
         systemversion "latest"
         links { "opengl32", "gdi32", "user32", "shell32", "ole32" }
 
@@ -48,10 +51,10 @@ project "Sprforge"
 
     -- Libraries resolved via vcpkg manifest
     links {
-        "glfw3",
+        "glfw3dll",
         "glad",
-        "imgui",
-        "fmt",
+        "imguid",
+        "fmtd",
         "tomlplusplus",
         "nfd"
     }

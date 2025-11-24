@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "imgui.h"
 #include "nfd.h"
 #include <algorithm>
@@ -58,24 +59,26 @@ namespace Tools {
 
     inline std::string openFileDialog(const std::vector<std::string> &extensions) {
         NFD_Init();
-        nfdchar_t *outPath = nullptr;
+        nfdu8char_t *outPath = nullptr;
 
         // Create filter items dynamically based on input extensions
         int filtersCount = (int) extensions.size();
-        std::vector<nfdchar_t> filterPattern;
-        std::string filterStr;
+        std::vector<nfdu8filteritem_t> filters(filtersCount);
         for (int i = 0; i < filtersCount; i++) {
-            if (i > 0) filterStr += ",";
-            filterStr += extensions[i];
+            const auto &ext = extensions[i];
+            std::string name = ext + " Files";
+            std::string pattern = ext;
+            filters[i].name = name.c_str();
+            filters[i].spec = pattern.c_str();
         }
 
-        // Open the file dialog
-        nfdresult_t result = NFD_OpenDialog(&outPath, filterStr.empty() ? nullptr : filterStr.c_str(), nullptr);
+        // Open the file dialog using nativefiledialog-extended API
+        nfdresult_t result = NFD_OpenDialogU8(&outPath, filters.data(), filtersCount, nullptr);
         std::string chosenPath;
 
         if (result == NFD_OKAY) {
             chosenPath = outPath;
-            NFD_FreePath(outPath);
+            NFD_FreePathU8(outPath);
         } else if (result == NFD_CANCEL) {
             puts("File dialogue cancelled.");
         } else {
@@ -110,14 +113,14 @@ namespace Tools {
 
     inline std::string openFileDialogChooseFolder() {
         NFD_Init();
-        nfdchar_t *outPath = nullptr;
+        nfdu8char_t *outPath = nullptr;
 
-        nfdresult_t result = NFD_PickFolder(&outPath, nullptr);
+        nfdresult_t result = NFD_PickFolderU8(&outPath, nullptr);
         std::string chosenFolderPath;
 
         if (result == NFD_OKAY) {
             chosenFolderPath = outPath;
-            NFD_FreePath(outPath);
+            NFD_FreePathU8(outPath);
         } else if (result == NFD_CANCEL) {
             puts("User pressed cancel.");
         } else {

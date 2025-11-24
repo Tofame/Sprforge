@@ -1,7 +1,9 @@
 ﻿#include <algorithm>
 #include <cstdio>
 
-#include <glad/gl.h>
+#include <GLES2/gl2.h>
+#include <EGL/egl.h>
+
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -12,8 +14,8 @@
 
 #include <imgui.h>
 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 #include "Graphics/SFMLCompat.h"
 #include "ItemsScrollableWindow.h"
@@ -29,6 +31,7 @@
 #include "Helper/SavedData.h"
 #include "Misc/definitions.h"
 #include "Helper/DropManager.h"
+#include <glad/glad.h>
 
 struct AppContext {
     GLFWwindow* window = nullptr;
@@ -133,7 +136,7 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    if (!gladLoadGL(glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::fprintf(stderr, "Failed to load OpenGL context via GLAD.\n");
         glfwDestroyWindow(window);
         glfwTerminate();

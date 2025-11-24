@@ -4,7 +4,8 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include <glad/gl.h>
+#include <GLES2/gl2.h>
+#include <EGL/egl.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
