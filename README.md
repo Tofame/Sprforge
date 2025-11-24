@@ -2,11 +2,14 @@ What is Tofame's 'SprForge' Asset Editor?
 ----
 
 Just as name suggests, SprForge is an Asset Editor allowing for creation/load of graphical assets and compiling them into a single binary file(s), such as `.spr` and `.dat`. 
+<hr>
 
 What is ``.spr`` - it is a file containing graphics, compressed to remain low sized.
-What is ``.dat`` - it is a file containing game data for items, outfits, effects and missiles. For instance, it decides the items properties - isGround, isStackable etc.
 
-Currently both of those formats are based on how [Object Builder](https://github.com/punkice3407/ObjectBuilder) and other similar tools load/compile those files, in order to be compatible with game engines/clients. However, my end goal plan, is to create my own formats, that will be more efficient.
+What is ``.dat`` - it is a file containing game data for items, outfits, effects and missiles. For instance, it decides the items properties - isGround, isStackable etc.
+<hr>
+
+Currently both of those formats are based on how [Object Builder](https://github.com/punkice3407/ObjectBuilder) and other similar tools' load/compile implementations, in order to be compatible with game engines/clients. However, my end goal plan, is to create my own formats, that will be more efficient.
 
 
 Some features:
