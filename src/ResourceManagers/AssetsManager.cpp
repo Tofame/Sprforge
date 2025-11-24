@@ -1,18 +1,77 @@
-#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <filesystem>
+#include <cstring>
+#include <cmath>
 
 #include "AssetsManager.h"
 #include "../Helper/SavedData.h"
-#include "misc/cpp/imgui_stdlib.h"
+#include <imgui/misc/cpp/imgui_stdlib.h>
 #include "../Misc/definitions.h"
 #include "../Misc/Timer.h"
 #include "../Things/Outfits.h"
 #include "../Things/Effects.h"
 #include "../Things/Missiles.h"
 #include "../Things/ThingType.h"
+
+namespace {
+
+sf::Image ResizeNearest(const sf::Image& source, sf::Vector2u targetSize) {
+    if (targetSize.x == 0 || targetSize.y == 0) {
+        return sf::Image();
+    }
+
+    auto srcSize = source.getSize();
+    if (srcSize.x == 0 || srcSize.y == 0) {
+        return sf::Image(targetSize, sf::Color::Transparent);
+    }
+
+    sf::Image result(targetSize, sf::Color::Transparent);
+    const uint8_t* srcPixels = source.getPixelsPtr();
+    uint8_t* dstPixels = result.getPixelsPtr();
+
+    for (unsigned y = 0; y < targetSize.y; ++y) {
+        unsigned srcY = std::min(srcSize.y - 1, (y * srcSize.y) / targetSize.y);
+        for (unsigned x = 0; x < targetSize.x; ++x) {
+            unsigned srcX = std::min(srcSize.x - 1, (x * srcSize.x) / targetSize.x);
+            size_t srcIndex = (static_cast<size_t>(srcY) * srcSize.x + srcX) * 4;
+            size_t dstIndex = (static_cast<size_t>(y) * targetSize.x + x) * 4;
+            dstPixels[dstIndex + 0] = srcPixels[srcIndex + 0];
+            dstPixels[dstIndex + 1] = srcPixels[srcIndex + 1];
+            dstPixels[dstIndex + 2] = srcPixels[srcIndex + 2];
+            dstPixels[dstIndex + 3] = srcPixels[srcIndex + 3];
+        }
+    }
+
+    return result;
+}
+
+void BlitImage(sf::Image& destination, const sf::Image& source, unsigned destX, unsigned destY) {
+    auto destSize = destination.getSize();
+    auto srcSize = source.getSize();
+    if (destSize.x == 0 || destSize.y == 0 || srcSize.x == 0 || srcSize.y == 0) {
+        return;
+    }
+
+    const uint8_t* srcPixels = source.getPixelsPtr();
+    uint8_t* destPixels = destination.getPixelsPtr();
+    const unsigned maxWidth = (destX < destSize.x) ? std::min(srcSize.x, destSize.x - destX) : 0;
+    if (maxWidth == 0) {
+        return;
+    }
+
+    for (unsigned y = 0; y < srcSize.y; ++y) {
+        if (destY + y >= destSize.y) {
+            break;
+        }
+        size_t srcIndex = (static_cast<size_t>(y) * srcSize.x) * 4;
+        size_t destIndex = (static_cast<size_t>(destY + y) * destSize.x + destX) * 4;
+        std::memcpy(destPixels + destIndex, srcPixels + srcIndex, static_cast<size_t>(maxWidth) * 4);
+    }
+}
+
+} // namespace
 
 AssetsManager::AssetsManager(GUIHelper* guiHelper) {
     this->guiHelper = guiHelper;
@@ -199,9 +258,6 @@ bool AssetsManager::loadSpr(const std::string& sprFilePath) {
 
 void AssetsManager::compileSprFromTextures(const std::string& fileName)
 {
-    // temp var for an optional feature that I once used
-    bool downscale64To32 = false;
-
     std::ofstream out(fileName, std::ios::binary);
     if (!out.is_open()) {
         std::cerr << "Failed to open file for writing: " << fileName << std::endl;
@@ -244,22 +300,8 @@ void AssetsManager::compileSprFromTextures(const std::string& fileName)
         out.put(0).put(0).put(0);
 
         // Get pixel data
-        const uint8_t* pixels;
-        if(downscale64To32) {
-            sf::RenderTexture rt({32, 32});
-            sf::Sprite sprite(*texture);
-            sprite.setScale({0.5f, 0.5f}); // 64 → 32 scaling
-
-            rt.clear(sf::Color::Transparent);
-            rt.draw(sprite);
-            rt.display();
-
-            sf::Image scaledImage = rt.getTexture().copyToImage();
-            pixels = scaledImage.getPixelsPtr();
-        } else {
-            const auto& image = texture->copyToImage();
-            pixels = image.getPixelsPtr();
-        }
+        sf::Image image = texture->copyToImage();
+        const uint8_t* pixels = image.getPixelsPtr();
 
         // RLE compression
         std::vector<uint8_t> rleData;
@@ -1232,27 +1274,20 @@ void AssetsManager::createPreviewTexture(int id, ThingCategory category) {
         return;
     }
 
-    auto finalSprite = sf::Sprite(thingPreviewTexture);
-    auto SizeOfButtonSprite = ConfigManager::getInstance()->getSpriteButtonSize();
-    finalSprite.setScale({
-         static_cast<float>(SizeOfButtonSprite.x) / thingPreviewTexture.getSize().x,
-         static_cast<float>(SizeOfButtonSprite.y) / thingPreviewTexture.getSize().y
-     });
+    auto buttonSize = ConfigManager::getInstance()->getSpriteButtonSize();
+    sf::Vector2u targetSize{
+        static_cast<unsigned>(std::max(1.0f, buttonSize.x)),
+        static_cast<unsigned>(std::max(1.0f, buttonSize.y))
+    };
 
-    sf::RenderTexture scaledRender (sf::Vector2u(SizeOfButtonSprite.x, SizeOfButtonSprite.y));
-    if (scaledRender.getSize().x == 0 || scaledRender.getSize().y == 0) {
-        if (id >= previewTextures.size()) {
-            previewTextures.resize(id + 1);
-        }
+    sf::Image sourceImage = thingPreviewTexture.copyToImage();
+    sf::Image scaledImage = ResizeNearest(sourceImage, targetSize);
+
+    auto texture = std::make_shared<sf::Texture>();
+    if (!texture->loadFromImage(scaledImage)) {
         replacePreviewTexture(id, BLANK_TEXTURE, category);
         return;
     }
-    
-    scaledRender.clear(sf::Color::Transparent);
-    scaledRender.draw(finalSprite);
-    scaledRender.display();
-
-    auto texture = std::make_shared<sf::Texture>(scaledRender.getTexture());
     if (id >= previewTextures.size()) {
         previewTextures.resize(id + 1);
     }
@@ -1368,13 +1403,7 @@ sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, 
         return sf::Texture(*BLANK_TEXTURE);
     }
     
-    sf::RenderTexture render(size);
-    if (render.getSize().x == 0 || render.getSize().y == 0) {
-        Warninger::sendWarning(FUNC_NAME, "Failed to create RenderTexture for ThingType (" + std::to_string(thingTypeId) + ")");
-        return sf::Texture(*BLANK_TEXTURE);
-    }
-
-    render.clear(sf::Color::Transparent);
+    sf::Image sheetImage(size, sf::Color::Transparent);
 
     for (int a = 1; a <= animations; a++) {
         for (int l = 0; l < thingType->layers; l++) {
@@ -1382,20 +1411,21 @@ sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, 
                 for (int h = 0; h < thingType->height; h++) {
                     auto texture = getTexture(getTextureIdFromThingType(thingType, w, h, a, l, 0, 0, 0));
                     if (texture) {
-                        sf::Sprite sprite(*texture);
-                        sprite.setPosition(sf::Vector2f(
-                                static_cast<float>((thingType->width - w - 1) * spriteMaxSize),
-                                static_cast<float>((thingType->height - h - 1) * spriteMaxSize + ((a - 1) * singleAnimationFrameSize))
-                        ));
-                        render.draw(sprite);
+                        sf::Image tileImage = texture->copyToImage();
+                        unsigned destX = static_cast<unsigned>((thingType->width - w - 1) * spriteMaxSize);
+                        unsigned destY = static_cast<unsigned>((thingType->height - h - 1) * spriteMaxSize +
+                                                               ((a - 1) * singleAnimationFrameSize));
+                        BlitImage(sheetImage, tileImage, destX, destY);
                     }
                 }
             }
         }
     }
-    render.display();
 
-    sf::Texture spriteSheetTexture = sf::Texture(render.getTexture());
+    sf::Texture spriteSheetTexture;
+    if (!spriteSheetTexture.loadFromImage(sheetImage)) {
+        return sf::Texture(*BLANK_TEXTURE);
+    }
     return spriteSheetTexture;
 }
 

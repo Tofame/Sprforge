@@ -1,7 +1,21 @@
-#include <SFML/Graphics.hpp>
-#include <imgui.h>
-#include <imgui-SFML.h>
+﻿#include <algorithm>
+#include <cstdio>
 
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#include <windows.h>
+#include <ole2.h>
+#endif
+
+#include <imgui.h>
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
+
+#include "Graphics/SFMLCompat.h"
 #include "ItemsScrollableWindow.h"
 #include "OutfitsScrollableWindow.h"
 #include "EffectsScrollableWindow.h"
@@ -16,138 +30,170 @@
 #include "Misc/definitions.h"
 #include "Helper/DropManager.h"
 
-void displayExitConfirmation(sf::RenderWindow& window, bool& showExitConfirmation, bool unsavedChanges, AssetsManager* am);
+struct AppContext {
+    GLFWwindow* window = nullptr;
+    AssetsManager* assetsManager = nullptr;
+    SpritesScrollableWindow* spritesWindow = nullptr;
+    ItemsScrollableWindow* itemsWindow = nullptr;
+    bool showExitConfirmation = false;
+};
+
+void displayExitConfirmation(GLFWwindow* window, bool& showExitConfirmation, bool unsavedChanges, AssetsManager* am);
 void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindow, ItemsScrollableWindow* itemsWindow);
 void copyToClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindow, ItemsScrollableWindow* itemsWindow);
 
-int main() {
-#ifdef _WIN32
-    // Initialize Windows COM for drag-and-drop
-    HRESULT hr = OleInitialize(NULL);
-#endif
+static void glfwErrorCallback(int error, const char* description) {
+    std::fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
 
-    // Create a single application window
-    sf::RenderWindow window(sf::VideoMode({1100, 800}), "Sprforge");
-    window.setFramerateLimit(60);
-    // Request focus to prevent focus issues
-    window.requestFocus();
+static void FramebufferSizeCallback(GLFWwindow*, int width, int height) {
+    glViewport(0, 0, width, height);
+}
 
-    // Setup platform-specific DropManager
-#ifdef _WIN32
-    DropManagerWindows dropManager;
-    void* nativeHandle = window.getNativeHandle();
-    dropManager.Initialize(nativeHandle);
-#else
-    DropManagerSFML dropManager;
-    dropManager.Initialize(window.getNativeHandle());
-#endif
-
-    // Initialize ImGui-SFML
-    if (!ImGui::SFML::Init(window)) {
-        return 1; // Failed to initialize ImGui-SFML
+static void WindowCloseCallback(GLFWwindow* window) {
+    auto ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx) {
+        return;
     }
-    window.resetGLStates();
-    
-    // Configure ImGui style to reduce "window inside window" appearance
+    if (ctx->spritesWindow && ctx->spritesWindow->hasUnsavedChanges()) {
+        ctx->showExitConfirmation = true;
+        glfwSetWindowShouldClose(window, GLFW_FALSE);
+    }
+}
+
+static void KeyCallback(GLFWwindow* window, int key, int, int action, int mods) {
+    if (action != GLFW_PRESS) {
+        return;
+    }
+
+    auto ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
+    if (!ctx || !ctx->assetsManager || !ctx->spritesWindow || !ctx->itemsWindow) {
+        return;
+    }
+
+#if defined(__APPLE__)
+    bool modifierPressed = (mods & GLFW_MOD_SUPER) != 0 || (mods & GLFW_MOD_CONTROL) != 0;
+#else
+    bool modifierPressed = (mods & GLFW_MOD_CONTROL) != 0;
+#endif
+    if (!modifierPressed) {
+        return;
+    }
+
+    if (key == GLFW_KEY_V) {
+        pasteFromClipboard(ctx->assetsManager, ctx->spritesWindow, ctx->itemsWindow);
+    } else if (key == GLFW_KEY_C) {
+        copyToClipboard(ctx->assetsManager, ctx->spritesWindow, ctx->itemsWindow);
+    }
+}
+
+static void SetupImGuiStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
-    // Reduce window borders and padding for a more integrated look
     style.WindowBorderSize = 0.0f;
     style.FrameBorderSize = 0.0f;
-    style.PopupBorderSize = 1.0f; // Keep borders for popups/modals
+    style.PopupBorderSize = 1.0f;
     style.WindowRounding = 0.0f;
     style.FrameRounding = 2.0f;
+}
+
+int main() {
+    bool comInitialized = false;
+#ifdef _WIN32
+    comInitialized = SUCCEEDED(OleInitialize(nullptr));
+#endif
+
+    glfwSetErrorCallback(glfwErrorCallback);
+    if (!glfwInit()) {
+#ifdef _WIN32
+        if (comInitialized) {
+            OleUninitialize();
+        }
+#endif
+        return 1;
+    }
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    GLFWwindow* window = glfwCreateWindow(1100, 800, "Sprforge", nullptr, nullptr);
+    if (!window) {
+        glfwTerminate();
+#ifdef _WIN32
+        if (comInitialized) {
+            OleUninitialize();
+        }
+#endif
+        return 1;
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    if (!gladLoadGL(glfwGetProcAddress)) {
+        std::fprintf(stderr, "Failed to load OpenGL context via GLAD.\n");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+#ifdef _WIN32
+        if (comInitialized) {
+            OleUninitialize();
+        }
+#endif
+        return 1;
+    }
+
+    glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
+
+#ifdef _WIN32
+    DropManagerWindows dropManager;
+    dropManager.Initialize(glfwGetWin32Window(window));
+#else
+    DropManagerStub dropManager;
+    dropManager.Initialize(nullptr);
+#endif
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    SetupImGuiStyle();
 
     auto guiHelper = new GUIHelper();
-
-    // initialize assets manager
     auto assetsManager = new AssetsManager(guiHelper);
-    // Create instances of the scrollable windows
-    SpritesScrollableWindow spritesScrollableWindow(window, assetsManager);
-    ItemsScrollableWindow itemsScrollableWindow(window, assetsManager);
-    OutfitsScrollableWindow outfitsScrollableWindow(window, assetsManager);
-    EffectsScrollableWindow effectsScrollableWindow(window, assetsManager);
-    MissilesScrollableWindow missilesScrollableWindow(window, assetsManager);
+    SpritesScrollableWindow spritesScrollableWindow(assetsManager);
+    ItemsScrollableWindow itemsScrollableWindow(assetsManager);
+    OutfitsScrollableWindow outfitsScrollableWindow(assetsManager);
+    EffectsScrollableWindow effectsScrollableWindow(assetsManager);
+    MissilesScrollableWindow missilesScrollableWindow(assetsManager);
 
-    // Add drop manager to panels
     spritesScrollableWindow.setDropManager(&dropManager);
 
-    bool showExitConfirmation = false;
+    AppContext appContext;
+    appContext.window = window;
+    appContext.assetsManager = assetsManager;
+    appContext.spritesWindow = &spritesScrollableWindow;
+    appContext.itemsWindow = &itemsScrollableWindow;
+
+    glfwSetWindowUserPointer(window, &appContext);
+    glfwSetKeyCallback(window, KeyCallback);
+    glfwSetWindowCloseCallback(window, WindowCloseCallback);
+
     sf::Clock deltaClock;
 
-    while (window.isOpen()) {
-        while (const std::optional<sf::Event> eventOptional = window.pollEvent()) {
-            const sf::Event& event = *eventOptional;
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        dropManager.Update();
 
-            // Process SFML events for ImGui-SFML
-            ImGui::SFML::ProcessEvent(window, event);
-            
-            // Handle focus events to ensure window stays focused
-            // Note: Focus events may vary by SFML version
-            if (event.is<sf::Event::FocusLost>()) {
-                // Window lost focus - could add handling here if needed
-            }
-            else if (event.is<sf::Event::FocusGained>()) {
-                // Window gained focus - ensure it's active
-                window.requestFocus();
-            }
-            // Handle window resize to update viewport for proportional scaling
-            else if (const auto* resizeEvent = event.getIf<sf::Event::Resized>()) {
-                sf::FloatRect visibleArea(sf::Vector2<float>{0.f,0.f}, sf::Vector2<float>{static_cast<float>(resizeEvent->size.x), static_cast<float>(resizeEvent->size.y)});
-                window.setView(sf::View(visibleArea));
-            }
-    
-            if (event.is<sf::Event::Closed>()) {
-                if (spritesScrollableWindow.hasUnsavedChanges()) {
-                    showExitConfirmation = true;
-                } else {
-                    window.close();
-                }
-            }
-#ifndef _WIN32
-            // Note: SFML 3.0 doesn't support file drop events
-            // File drag-and-drop on macOS would need to be implemented using Cocoa drag-and-drop APIs
-            // For now, file drops are not supported on macOS/Linux via SFML events
-            // TODO: Implement native macOS drag-and-drop using NSView drag-and-drop methods
-#endif
-            else if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
-                // Prevents crash that sometimes happened when ImGui/SFML tried to process weird keys
-                if (keyEvent->code <= sf::Keyboard::Key::Unknown) {
-                    continue;
-                }
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
-                // Hotkey logic: Ctrl+C (Copy); Ctrl+V (Paste)
-                // On macOS, Cmd+C and Cmd+V are typically used, but SFML maps them to Control
-#ifdef _WIN32
-                bool isModifierPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl);
-#else
-                // On macOS, check for both Cmd and Ctrl
-                bool isModifierPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LSystem) ||
-                                         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl);
-#endif
-                if (isModifierPressed && keyEvent->scancode == sf::Keyboard::Scan::V) {
-                    pasteFromClipboard(assetsManager, &spritesScrollableWindow, &itemsScrollableWindow);
-                }
-                else if (isModifierPressed && keyEvent->scancode == sf::Keyboard::Scan::C) {
-                    copyToClipboard(assetsManager, &spritesScrollableWindow, &itemsScrollableWindow);
-                }
-            }
-        }
-
-        // Update ImGui-SFML
-        ImGui::SFML::Update(window, deltaClock.restart());
-
-        // Update drop manager
-        dropManager.Update(window);
-
-        // For showing demo window
-        //ImGui::ShowDemoWindow();
-
-        if (dropManager.IsDraggingFiles())
-        {
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern))
-            {
-                // Tell ImGui we have an external drag source — files dragged from Windows Explorer
-                ImGui::SetDragDropPayload("FILES", nullptr, 0);  // no actual payload data needed here
+        if (dropManager.IsDraggingFiles()) {
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern)) {
+                ImGui::SetDragDropPayload("FILES", nullptr, 0);
                 ImGui::BeginTooltip();
                 ImGui::Text("Dragging files...");
                 ImGui::EndTooltip();
@@ -155,19 +201,26 @@ int main() {
             }
         }
 
-        // Call the update method of the SpritesScrollableWindow
-        // Make the ImGui window match the SFML window size for proportional scaling
-        sf::Vector2u windowSize = window.getSize();
+        int frameBufferWidth = 0;
+        int frameBufferHeight = 0;
+        glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+        sf::Vector2u windowSize{
+            static_cast<unsigned>(std::max(frameBufferWidth, 0)),
+            static_cast<unsigned>(std::max(frameBufferHeight, 0))
+        };
+
         ImGui::SetNextWindowSize(ImVec2(static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)));
         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::Begin("Asset Manager", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
-        
-        // Header: Toolbar controls
+        ImGui::Begin("Asset Manager", nullptr,
+                     ImGuiWindowFlags_NoResize |
+                     ImGuiWindowFlags_NoMove |
+                     ImGuiWindowFlags_NoTitleBar |
+                     ImGuiWindowFlags_NoCollapse);
+
         assetsManager->drawAssetsManagerControls();
         ImGui::Spacing();
-        
-        // Category selection tabs
-        static int selectedCategory = 0; // 0=Items, 1=Outfits, 2=Effects, 3=Missiles
+
+        static int selectedCategory = 0;
         if (ImGui::BeginTabBar("ThingCategoryTabs")) {
             if (ImGui::BeginTabItem("Items")) {
                 selectedCategory = 0;
@@ -187,22 +240,17 @@ int main() {
             }
             ImGui::EndTabBar();
         }
-        
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        
-        // Main content area: 30% - 40% - 30% grid layout using columns
+
         float availableWidth = ImGui::GetContentRegionAvail().x;
-        float availableHeight = ImGui::GetContentRegionAvail().y;
-        
-        // Set up three columns with proper widths
         ImGui::Columns(3, "MainColumns", false);
         ImGui::SetColumnWidth(0, availableWidth * 0.30f);
         ImGui::SetColumnWidth(1, availableWidth * 0.40f);
         ImGui::SetColumnWidth(2, availableWidth * 0.30f);
-        
-        // Column 1: Thing list (30%)
+
         ImGui::BeginGroup();
         if (selectedCategory == 0) {
             itemsScrollableWindow.drawItemTypeList(deltaClock);
@@ -213,15 +261,9 @@ int main() {
         } else if (selectedCategory == 3) {
             missilesScrollableWindow.drawMissileTypeList(deltaClock);
         }
-        
-        // Controls below list (centered)
+
         ImGui::Spacing();
-        if (assetsManager->isDatFileLoaded() && assetsManager->isGraphicFileLoaded()) {
-            float columnWidth = ImGui::GetColumnWidth();
-            float columnOffset = ImGui::GetColumnOffset();
-            
-            // Draw controls in an invisible group to measure width
-            ImGui::BeginGroup();
+        if (assetsManager->isDatFileLoaded()) {
             if (selectedCategory == 0) {
                 itemsScrollableWindow.drawPaginationControls();
             } else if (selectedCategory == 1) {
@@ -231,11 +273,9 @@ int main() {
             } else if (selectedCategory == 3) {
                 missilesScrollableWindow.drawPaginationControls();
             }
-            ImGui::EndGroup();
         }
         ImGui::EndGroup();
-        
-        // Column 2: Thing properties panel (40%)
+
         ImGui::NextColumn();
         if (selectedCategory == 0) {
             itemsScrollableWindow.drawItemTypePanel();
@@ -246,100 +286,100 @@ int main() {
         } else if (selectedCategory == 3) {
             missilesScrollableWindow.drawMissileTypePanel();
         }
-        
-        // Column 3: Sprites list (30%)
+
         ImGui::NextColumn();
         ImGui::BeginGroup();
         spritesScrollableWindow.drawTextureList(deltaClock);
-        
-        // Controls below sprites list (centered)
         ImGui::Spacing();
         if (assetsManager->isGraphicFileLoaded()) {
-            float columnWidth = ImGui::GetColumnWidth();
-            float columnOffset = ImGui::GetColumnOffset();
-            
-            // Draw controls in an invisible group to measure width
-            ImGui::BeginGroup();
             spritesScrollableWindow.drawListControlButtons();
-            ImGui::EndGroup();
         }
         ImGui::EndGroup();
-        
-        ImGui::Columns(1); // Reset columns
-        
-        // Status message at the bottom (centered)
+
+        ImGui::Columns(1);
+
         if (!assetsManager->isDatFileLoaded() && !assetsManager->isGraphicFileLoaded()) {
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
             const char* text = "Load assets first before buttons can be active.";
             float textWidth = ImGui::CalcTextSize(text).x;
-            float windowWidth = ImGui::GetContentRegionAvail().x;
-            float offset = (windowWidth - textWidth) * 0.5f;
-            if (offset > 0)
+            float innerWidth = ImGui::GetContentRegionAvail().x;
+            float offset = (innerWidth - textWidth) * 0.5f;
+            if (offset > 0.0f) {
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+            }
             ImGui::Text("%s", text);
         }
 
         ImGui::End();
 
-        // Clear the SFML window
-        window.clear();
+        glClearColor(0.08f, 0.08f, 0.09f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        displayExitConfirmation(window, showExitConfirmation, assetsManager->isCompilable(), assetsManager);
-        // Render ImGui on top of the existing SFML content
-        ImGui::SFML::Render(window);
-        window.display(); // Display everything in the SFML window
+        displayExitConfirmation(window,
+                                appContext.showExitConfirmation,
+                                assetsManager->isCompilable(),
+                                assetsManager);
+
+        ImGui::Render();
+        glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+        glViewport(0, 0, frameBufferWidth, frameBufferHeight);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
     }
 
-    // Cleanup
     SavedData::getInstance()->saveData();
 
     delete assetsManager;
     delete guiHelper;
 
-    ImGui::SFML::Shutdown();
-
-    // Shutdown drop manager
     dropManager.Shutdown();
 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
 #ifdef _WIN32
-    OleUninitialize();
+    if (comInitialized) {
+        OleUninitialize();
+    }
 #endif
 
     return 0;
 }
 
-void displayExitConfirmation(sf::RenderWindow& window, bool& showExitConfirmation, bool unsavedChanges, AssetsManager* am) {
-    // Check if we should show the exit confirmation dialog
+void displayExitConfirmation(GLFWwindow* window, bool& showExitConfirmation, bool unsavedChanges, AssetsManager* am) {
     if (showExitConfirmation) {
         ImGui::OpenPopup("Exit Confirmation");
-        showExitConfirmation = false; // Reset the flag to avoid reopening the popup continuously
+        showExitConfirmation = false;
     }
 
-    // Create the exit confirmation modal
     if (ImGui::BeginPopupModal("Exit Confirmation", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("You have unsaved changes. Do you really want to exit?");
+        if (unsavedChanges) {
+            ImGui::Text("You have unsaved changes. Do you really want to exit?");
+        } else {
+            ImGui::Text("Do you really want to exit?");
+        }
         ImGui::Separator();
 
-        // Handle exit confirmation
         if (ImGui::Button("Exit")) {
-            window.close(); // Close the window if the user confirms
-            ImGui::CloseCurrentPopup(); // Close the popup
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Compile Assets & Exit")) {
-            // TO-DO make better check, instead of compilable. E.g. sometimes we need to prompt "Compile As" basically.
-            if(am->isCompilable()) {
+            if (am && am->isCompilable()) {
                 am->compile();
             }
-
-            window.close(); // Close the window if the user confirms
-            ImGui::CloseCurrentPopup(); // Close the popup
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine(350);
         if (ImGui::Button("Cancel")) {
-            ImGui::CloseCurrentPopup(); // Close the popup if cancelled
+            ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
     }
@@ -350,9 +390,8 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
 
 #ifdef _WIN32
     bool hasBitmap = IsClipboardFormatAvailable(CF_BITMAP);
-    bool hasItemType = IsClipboardFormatAvailable(RegisterClipboardFormat("ItemTypeBinary"));
+    bool hasItemType = IsClipboardFormatAvailable(RegisterClipboardFormatA("ItemTypeBinary"));
 #else
-    // On macOS, we check if clipboard has image data
     bool hasBitmap = Tools::hasImageInClipboard();
     bool hasItemType = Tools::hasItemTypeInClipboard();
 #endif
@@ -378,7 +417,6 @@ void pasteFromClipboard(AssetsManager* am, SpritesScrollableWindow* spritesWindo
     } else if(selectedCategory == CATEGORY_ITEMS && hasItemType) {
         auto pastedItem = std::make_shared<ItemType>();
         if (Tools::pasteItemTypeFromClipboard(*pastedItem)) {
-            // Logic to replace the item with the pasted one
             int index = itemsWindow->getSelectedButtonIndex();
             am->setUnsavedItemType(pastedItem, index);
         } else {

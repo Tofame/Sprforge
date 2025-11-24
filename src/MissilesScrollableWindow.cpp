@@ -3,8 +3,8 @@
 #include "Misc/Warninger.h"
 #include "Things/ThingCategory.h"
 
-MissilesScrollableWindow::MissilesScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: ThingScrollableWindow(window, am, ThingCategory::MISSILE)
+MissilesScrollableWindow::MissilesScrollableWindow(AssetsManager* am)
+: ThingScrollableWindow(am, ThingCategory::MISSILE)
 {
 }
 

@@ -1,0 +1,513 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{8CAD9F58-7810-2FFD-2196-67B30DD8FA7F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\nativefiledialog-extended">
+      <UniqueIdentifier>{908177ED-7CD3-4EDD-65F2-8BED51E367C6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\nativefiledialog-extended\src">
+      <UniqueIdentifier>{A78799F9-93EF-5FC7-FC5A-74DDE8E176B3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\nativefiledialog-extended\src\include">
+      <UniqueIdentifier>{1A66EB19-06FA-E0C1-6FBE-3A765B711BB4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\nativefiledialog-extended\test">
+      <UniqueIdentifier>{1FD4CA2C-8B39-5EB3-1412-008C80765322}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Graphics">
+      <UniqueIdentifier>{0D564864-F9B8-D708-A23E-10BF8E80A38B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Helper">
+      <UniqueIdentifier>{FC189214-E8D0-D361-51D8-ACBD3DAF6E52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Misc">
+      <UniqueIdentifier>{083622CF-F402-7DDA-1D1C-6B820948B268}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ResourceManagers">
+      <UniqueIdentifier>{9216780B-7EA5-01D5-27C4-15D01332127B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Things">
+      <UniqueIdentifier>{A99CC430-9554-067E-FE5B-DFD9EA32A16E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed">
+      <UniqueIdentifier>{5FEBD812-CB76-46D7-D487-C9CB4092A2D7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows">
+      <UniqueIdentifier>{E8364C19-5444-7AFF-DD2A-76EA493746B6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows">
+      <UniqueIdentifier>{F117E4B5-5DA7-A5A0-66A3-86B8D2B1E0AC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include">
+      <UniqueIdentifier>{64A0BE2B-D0DB-1EEF-D9D0-9B7E458BA31F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\EGL">
+      <UniqueIdentifier>{2B273B31-9738-E3D7-208A-75178C9A6C11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GL">
+      <UniqueIdentifier>{4647F2D2-32DB-E77A-9B9F-412F8752226D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLES">
+      <UniqueIdentifier>{FE39A158-EA78-4BD4-93FB-27067F19013F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLES\1.0">
+      <UniqueIdentifier>{5CA5A4DA-487A-EC8D-7129-2C8A5D5DFAA4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLES2">
+      <UniqueIdentifier>{F079C86C-5C96-BA5D-256E-27CB9149241F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLES3">
+      <UniqueIdentifier>{F179C86C-5D96-BA5D-266E-27CB9249241F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLFW">
+      <UniqueIdentifier>{233AA158-0F79-4BD4-B8FB-2706A419013F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLSC">
+      <UniqueIdentifier>{BC3BA158-A87A-4BD4-51FD-27063D1B013F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0">
+      <UniqueIdentifier>{1A562BFA-062B-73AD-2FDA-B2A91B0E81C4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0.1">
+      <UniqueIdentifier>{B94A5932-A50A-EAD6-0E28-D2E1FA06FDE8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\GLSC2">
+      <UniqueIdentifier>{6EB3C86C-DACF-BA5D-A3A7-27CB0F83241F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\KHR">
+      <UniqueIdentifier>{D8403B31-4452-E3D7-CDA3-751739B46C11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\fmt">
+      <UniqueIdentifier>{9AB83B31-06CA-E3D7-8F1B-7617FB2B6D11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\glad">
+      <UniqueIdentifier>{EB51B358-D790-5DD4-8013-3A066C31133F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vcpkg_installed\x64-windows\x64-windows\include\toml++">
+      <UniqueIdentifier>{A58E5F71-9138-9580-7A09-9D9B6652356F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\dependencies\nativefiledialog-extended\src\include\nfd.h">
+      <Filter>dependencies\nativefiledialog-extended\src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\nativefiledialog-extended\src\include\nfd_glfw3.h">
+      <Filter>dependencies\nativefiledialog-extended\src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\nativefiledialog-extended\src\include\nfd_sdl2.h">
+      <Filter>dependencies\nativefiledialog-extended\src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\EffectsScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Graphics\SFMLCompat.h">
+      <Filter>src\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\DropManager.h">
+      <Filter>src\Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\GUIHelper.h">
+      <Filter>src\Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\SavedData.h">
+      <Filter>src\Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ItemsScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\Timer.h">
+      <Filter>src\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\Warninger.h">
+      <Filter>src\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\definitions.h">
+      <Filter>src\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\tools.h">
+      <Filter>src\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MissilesScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\OutfitsScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ResourceManagers\AssetsManager.h">
+      <Filter>src\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ResourceManagers\ConfigManager.h">
+      <Filter>src\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SpritesScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ThingScrollableWindow.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\EffectType.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Effects.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Item.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ItemType.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Items.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\MissileType.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Missiles.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\OutfitType.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Outfits.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Thing.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ThingCategory.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ThingType.h">
+      <Filter>src\Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\EGL\egl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\EGL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\EGL\eglext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\EGL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\EGL\eglplatform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\EGL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GL\glcorearb.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GL\glext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GL\glxext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GL\wgl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GL\wglext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES\1.0\gl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES\1.0</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES\egl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES\gl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES\glext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES\glplatform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES2\gl2.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES2\gl2ext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES2\gl2platform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES3\gl3.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES3\gl31.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES3\gl32.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLES3\gl3platform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLES3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLFW\glfw3.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLFW</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLFW\glfw3native.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLFW</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0.1\gl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0.1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0\gl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLSC\1.0</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLSC2\gl2platform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLSC2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLSC2\glsc2.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLSC2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\GLSC2\glsc2ext.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\GLSC2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\KHR\khrplatform.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\KHR</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\args.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\base.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\chrono.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\color.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\compile.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\core.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\format-inl.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\format.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\os.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\ostream.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\printf.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\ranges.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\std.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\fmt\xchar.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\fmt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\glad\glad.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\glad</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imconfig.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui_impl_glfw.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui_impl_opengl3.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui_impl_opengl3_loader.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui_internal.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imgui_stdlib.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imstb_rectpack.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imstb_textedit.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\imstb_truetype.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\nfd.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\nfd_glfw3.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\nfd_sdl2.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_c_lexer.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_connected_components.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_divide.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_ds.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_dxt.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_easy_font.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_herringbone_wang_tile.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_hexwave.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_image.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_image_resize2.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_image_write.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_include.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_leakcheck.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_perlin.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_rect_pack.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_sprintf.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_textedit.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_tilemap_editor.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_truetype.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\stb_voxel_render.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vcpkg_installed\x64-windows\x64-windows\include\toml++\toml.h">
+      <Filter>vcpkg_installed\x64-windows\x64-windows\include\toml++</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\src\nfd_gtk.cpp">
+      <Filter>dependencies\nativefiledialog-extended\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\src\nfd_portal.cpp">
+      <Filter>dependencies\nativefiledialog-extended\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\src\nfd_win.cpp">
+      <Filter>dependencies\nativefiledialog-extended\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\test\test_opendialog_cpp.cpp">
+      <Filter>dependencies\nativefiledialog-extended\test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\test\test_opendialogmultiple_cpp.cpp">
+      <Filter>dependencies\nativefiledialog-extended\test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\nativefiledialog-extended\test\test_pickfolder_cpp.cpp">
+      <Filter>dependencies\nativefiledialog-extended\test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\EffectsScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Graphics\SFMLCompat.cpp">
+      <Filter>src\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Helper\GUIHelper.cpp">
+      <Filter>src\Helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Helper\SavedData.cpp">
+      <Filter>src\Helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ItemsScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MissilesScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\OutfitsScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ResourceManagers\AssetsManager.cpp">
+      <Filter>src\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ResourceManagers\ConfigManager.cpp">
+      <Filter>src\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SpritesScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ThingScrollableWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\EffectType.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Effects.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Item.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\ItemType.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Items.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\MissileType.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Missiles.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\OutfitType.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Outfits.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Thing.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\ThingType.cpp">
+      <Filter>src\Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\imgui_backends.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

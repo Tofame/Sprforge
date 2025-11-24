@@ -3,8 +3,8 @@
 #include "Misc/Warninger.h"
 #include "Things/ThingCategory.h"
 
-EffectsScrollableWindow::EffectsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: ThingScrollableWindow(window, am, ThingCategory::EFFECT)
+EffectsScrollableWindow::EffectsScrollableWindow(AssetsManager* am)
+: ThingScrollableWindow(am, ThingCategory::EFFECT)
 {
 }
 

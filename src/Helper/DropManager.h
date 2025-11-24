@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <imgui.h>
-#include <SFML/Graphics/RenderWindow.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,7 +20,7 @@ public:
     virtual void Shutdown() = 0;
 
     // Update method to be called from event loop
-    virtual void Update(sf::RenderWindow& window) = 0;
+    virtual void Update() = 0;
 
     // Public interface
     bool IsDraggingFiles() const { return isDraggingFiles; }
@@ -52,7 +51,7 @@ public:
         }
     }
 
-    void Update(sf::RenderWindow& window) override {
+    void Update() override {
         // Windows drag-and-drop is handled via COM callbacks
         // This method can be used for any additional per-frame updates if needed
     }
@@ -156,10 +155,10 @@ private:
 // Note: SFML 3.0 doesn't support file drop events, so file drag-and-drop
 // would need to be implemented using native platform APIs (Cocoa on macOS, GTK on Linux)
 // For now, file drops are not functional on macOS/Linux
-class DropManagerSFML : public DropManager {
+class DropManagerStub : public DropManager {
 public:
-    DropManagerSFML() = default;
-    ~DropManagerSFML() = default;
+    DropManagerStub() = default;
+    ~DropManagerStub() = default;
 
     void Initialize(void* nativeWindowHandle) override {
         // TODO: Implement native macOS drag-and-drop using NSView drag-and-drop methods
@@ -171,9 +170,8 @@ public:
         // No cleanup needed currently
     }
 
-    void Update(sf::RenderWindow& window) override {
+    void Update() override {
         // TODO: Implement native drag-and-drop handling here
-        (void)window; // Suppress unused parameter warning
     }
 
     // Call this from native drag-and-drop callbacks when files are dropped
