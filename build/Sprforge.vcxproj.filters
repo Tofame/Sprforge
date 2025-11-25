@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Graphics">
+      <UniqueIdentifier>{1653CE33-0220-293F-2B39-17E717655ECD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Helper">
+      <UniqueIdentifier>{C53F33B7-B1E1-5D8D-9A9C-71E186DDE4DD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{9116897C-7D4D-8A0D-263A-70101250060F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ResourceManagers">
+      <UniqueIdentifier>{9B0C0BA4-8705-2AF6-B037-0F7B9C8F0902}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Things">
+      <UniqueIdentifier>{72C365D3-5E65-90A9-4720-A4FD336117FA}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\EffectsScrollableWindow.h" />
+    <ClInclude Include="..\src\Graphics\SFMLCompat.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\DropManager.h">
+      <Filter>Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\GUIHelper.h">
+      <Filter>Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Helper\SavedData.h">
+      <Filter>Helper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ItemsScrollableWindow.h" />
+    <ClInclude Include="..\src\Misc\Timer.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\Warninger.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\definitions.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Misc\tools.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MissilesScrollableWindow.h" />
+    <ClInclude Include="..\src\OutfitsScrollableWindow.h" />
+    <ClInclude Include="..\src\ResourceManagers\AssetsManager.h">
+      <Filter>ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ResourceManagers\ConfigManager.h">
+      <Filter>ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SpritesScrollableWindow.h" />
+    <ClInclude Include="..\src\ThingScrollableWindow.h" />
+    <ClInclude Include="..\src\Things\EffectType.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Effects.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Item.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ItemType.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Items.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\MissileType.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Missiles.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\OutfitType.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Outfits.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\Thing.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ThingCategory.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Things\ThingType.h">
+      <Filter>Things</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\EffectsScrollableWindow.cpp" />
+    <ClCompile Include="..\src\Graphics\SFMLCompat.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Helper\GUIHelper.cpp">
+      <Filter>Helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Helper\SavedData.cpp">
+      <Filter>Helper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ItemsScrollableWindow.cpp" />
+    <ClCompile Include="..\src\MissilesScrollableWindow.cpp" />
+    <ClCompile Include="..\src\OutfitsScrollableWindow.cpp" />
+    <ClCompile Include="..\src\ResourceManagers\AssetsManager.cpp">
+      <Filter>ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ResourceManagers\ConfigManager.cpp">
+      <Filter>ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SpritesScrollableWindow.cpp" />
+    <ClCompile Include="..\src\ThingScrollableWindow.cpp" />
+    <ClCompile Include="..\src\Things\EffectType.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Effects.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Item.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\ItemType.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Items.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\MissileType.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Missiles.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\OutfitType.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Outfits.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\Thing.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Things\ThingType.cpp">
+      <Filter>Things</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp" />
+  </ItemGroup>
+</Project>

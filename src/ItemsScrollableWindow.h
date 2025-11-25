@@ -1,15 +1,14 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "Graphics/SFMLCompat.h"
 #include <imgui.h>
-#include <imgui-SFML.h>
 #include "ThingScrollableWindow.h"
 #include "Things/Items.h"
 #include "Misc/tools.h"
 
 class ItemsScrollableWindow : public ThingScrollableWindow {
 public:
-    ItemsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    explicit ItemsScrollableWindow(AssetsManager* am);
     
     // Implement pure virtual methods from base class
     void drawTypeList(sf::Clock& deltaClock) override { drawItemTypeList(deltaClock); }

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "Graphics/SFMLCompat.h"
 #include <imgui.h>
-#include <imgui-SFML.h>
 #include "ResourceManagers/AssetsManager.h"
 #include "Misc/tools.h"
 #include "Helper/DropManager.h"
@@ -10,7 +9,7 @@
 
 class SpritesScrollableWindow {
 public:
-    SpritesScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    explicit SpritesScrollableWindow(AssetsManager* am);
     // Draws ScrollablePanel with Textures
     void drawTextureList(sf::Clock& deltaClock);
     // Pagination, Adding/Removing texture etc.
@@ -118,7 +117,6 @@ public:
         return dropManager;
     }
 private:
-    sf::RenderWindow& window;
     AssetsManager* assetsManager;
     DropManager* dropManager;
 

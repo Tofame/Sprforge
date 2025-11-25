@@ -4,8 +4,7 @@
 #include "Helper/SavedData.h"
 #include "Misc/definitions.h"
 
-SpritesScrollableWindow::SpritesScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: window(window)
+SpritesScrollableWindow::SpritesScrollableWindow(AssetsManager* am)
 {
     assetsManager = am;
 

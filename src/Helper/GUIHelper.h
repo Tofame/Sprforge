@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <cstdint>
-#include "SFML/Graphics/Texture.hpp"
+#include "../Graphics/SFMLCompat.h"
 #include "imgui.h"
 
 class GUIHelper {
