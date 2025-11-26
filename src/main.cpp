@@ -64,7 +64,33 @@ static void WindowCloseCallback(GLFWwindow* window) {
     }
 }
 
-static void KeyCallback(GLFWwindow* window, int key, int, int action, int mods) {
+static void CharCallback(GLFWwindow* window, unsigned int codepoint) {
+    ImGui_ImplGlfw_CharCallback(window, codepoint);
+}
+
+static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+}
+
+static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+}
+
+static void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
+static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    // Forward to ImGui first
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+    
+    // Only process our custom shortcuts if ImGui doesn't want to capture keyboard input
+    // This allows text input fields to work properly (Enter, Backspace, etc.)
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureKeyboard) {
+        return;
+    }
+
     if (action != GLFW_PRESS) {
         return;
     }
@@ -160,7 +186,9 @@ int main() {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    // Set install_callbacks to false since we'll handle callbacks manually
+    // This allows us to forward events to ImGui while also handling custom shortcuts
+    ImGui_ImplGlfw_InitForOpenGL(window, false);
     ImGui_ImplOpenGL3_Init("#version 330");
     SetupImGuiStyle();
 
@@ -182,6 +210,10 @@ int main() {
 
     glfwSetWindowUserPointer(window, &appContext);
     glfwSetKeyCallback(window, KeyCallback);
+    glfwSetCharCallback(window, CharCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetScrollCallback(window, ScrollCallback);
+    glfwSetCursorPosCallback(window, CursorPosCallback);
     glfwSetWindowCloseCallback(window, WindowCloseCallback);
 
     sf::Clock deltaClock;
