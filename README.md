@@ -31,14 +31,10 @@ Image
 Compiling in Windows
 ----
 
-It is compillable in CLion.
-* You have to set working directory in run setup to be the folder SprForge/ as this is where data/ and config.toml is.
-
-Uses CMake's fetch content to get most of the required libs.
-The libs you need to get/update on your own:
-1. Nativefiledialog-extended
-* Download a release of [native-filedialog-extended](https://github.com/btzy/nativefiledialog-extended/releases) - I tested with .zip of v1.2.1 release.
-* Add it (just drag n drop) to the dependencies/nativefiledialog-extended
+You need [visual studio](https://visualstudio.microsoft.com/)
+Get [premake](https://premake.github.io/download/), it will be e.g. ``premake5.exe``.
+Open cmd where the project folder is, type: ``premake5 vs2022``, files such as ``.sln``, ``.vcxproj`` should be generated.
+Open ``.sln`` and build the project.
 
 Donate
 ----
