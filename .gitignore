@@ -411,3 +411,6 @@ libzlib.dll
 /cmake-build-debug-mingw
 /og_src
 /vcpkg_installed
+Sprforge.sln
+Sprforge.vcxproj
+Sprforge.vcxproj.filters

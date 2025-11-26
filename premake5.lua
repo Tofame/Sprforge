@@ -3,7 +3,7 @@ workspace "Sprforge"
     configurations { "Debug", "Release" }
     platforms { "x64" }
     startproject "Sprforge"
-    location "build"
+    location ""
 
     filter "platforms:x64"
         architecture "x86_64"
@@ -12,7 +12,7 @@ workspace "Sprforge"
 
 -- Project configuration ----------------------------------------------------
 project "Sprforge"
-    kind "ConsoleApp"
+    kind "WindowedApp"
     language "C++"
     cppdialect "C++20"
     targetdir ("bin/%{cfg.buildcfg}")
@@ -24,8 +24,6 @@ project "Sprforge"
         "src/**.h"
     }
     
-    -- Exclude imgui_backends.cpp if it exists (vcpkg handles backends)
-    removefiles { "src/imgui_backends.cpp" }
 
     defines { "IMGUI_IMPL_OPENGL_LOADER_GLAD" }
 
@@ -34,8 +32,9 @@ project "Sprforge"
         vsprops {
             VcpkgEnableManifest = "true"
         }
-		buildoptions { "/bigobj", "/utf-8" }
-        defines { "NOMINMAX", "_WIN32", "WIN32", "_WINDOWS" }
+        buildoptions {"/utf-8" }
+        defines { "NOMINMAX", "_WIN32", "WIN32", "_WINDOWS", "PLATFORM_WINDOWS" }
+        linkoptions {"/SUBSYSTEM:WINDOWS", "/ENTRY:mainCRTStartup"}
         systemversion "latest"
         links { "opengl32", "gdi32", "user32", "shell32", "ole32" }
 
@@ -53,8 +52,6 @@ project "Sprforge"
     links {
         "glfw3dll",
         "glad",
-        "imguid",
-        "fmtd",
         "tomlplusplus",
         "nfd"
     }
@@ -85,9 +82,22 @@ project "Sprforge"
         defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
+        kind "ConsoleApp"
+        linkoptions { "/SUBSYSTEM:CONSOLE" }
+		links {
+			"imguid",
+			"fmtd"
+		}
 
     filter "configurations:Release"
         defines { "NDEBUG" }
         runtime "Release"
         optimize "On"
+        kind "WindowedApp"
+        linkoptions { "/SUBSYSTEM:WINDOWS" }
+		links {
+			"imgui",
+			"fmt"
+		}
 
+	filter {}
