@@ -52,8 +52,6 @@ project "Sprforge"
     links {
         "glfw3dll",
         "glad",
-        "imguid",
-        "fmtd",
         "tomlplusplus",
         "nfd"
     }
@@ -84,9 +82,22 @@ project "Sprforge"
         defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
+        kind "ConsoleApp"
+        linkoptions { "/SUBSYSTEM:CONSOLE" }
+		links {
+			"imguid",
+			"fmtd"
+		}
 
     filter "configurations:Release"
         defines { "NDEBUG" }
         runtime "Release"
         optimize "On"
+        kind "WindowedApp"
+        linkoptions { "/SUBSYSTEM:WINDOWS" }
+		links {
+			"imgui",
+			"fmt"
+		}
 
+	filter {}
