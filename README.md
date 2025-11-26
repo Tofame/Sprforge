@@ -32,9 +32,19 @@ Compiling in Windows
 ----
 
 You need [visual studio](https://visualstudio.microsoft.com/)
+
 Get [premake](https://premake.github.io/download/), it will be e.g. ``premake5.exe``.
+
 Open cmd where the project folder is, type: ``premake5 vs2022``, files such as ``.sln``, ``.vcxproj`` should be generated.
+
 Open ``.sln`` and build the project.
+
+Compiling on other OS
+----
+
+We have workflows, for macOS and linux but I don't know if they work.
+
+Another person, who is knowledgable enough about either of those, would have to maintain that.
 
 Donate
 ----
