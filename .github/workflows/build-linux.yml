@@ -1,4 +1,4 @@
-name: Build macOS
+name: Build Linux
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ on:
         default: 'master'
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
+  build-linux:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -18,25 +18,30 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Install Xcode Command Line Tools
+      - name: Install system dependencies
         run: |
-          sudo xcode-select --install || echo "CLT already installed"
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-
-      - name: Install Homebrew dependencies
-        run: |
-          brew install premake5 pkg-config
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            premake5 \
+            pkg-config \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxinerama-dev
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          vcpkgTriplet: 'x64-osx'
+          vcpkgTriplet: 'x64-linux'
 
       - name: Set vcpkg environment
         run: |
           echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
-          echo "VCPKG_DEFAULT_TRIPLET=x64-osx" >> $GITHUB_ENV
+          echo "VCPKG_DEFAULT_TRIPLET=x64-linux" >> $GITHUB_ENV
 
       - name: Generate build files with premake5
         env:
@@ -49,11 +54,12 @@ jobs:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
         run: |
           cd build
-          make config=release_x64 -j$(sysctl -n hw.ncpu)
+          make config=release_x64 -j$(nproc)
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macOS-Build
+          name: Linux-Build
           path: bin/Release/Sprforge
           if-no-files-found: warn
+

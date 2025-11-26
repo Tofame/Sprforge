@@ -2,8 +2,8 @@
 #include "Misc/Warninger.h"
 #include "ResourceManagers/ConfigManager.h"
 
-ThingScrollableWindow::ThingScrollableWindow(sf::RenderWindow& window, AssetsManager* am, ThingCategory category)
-    : window(window), assetsManager(am), category(category) {
+ThingScrollableWindow::ThingScrollableWindow(AssetsManager* am, ThingCategory category)
+    : assetsManager(am), category(category) {
     idInputBuffer[0] = '\0';
 }
 

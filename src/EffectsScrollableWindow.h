@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "Graphics/SFMLCompat.h"
 #include <imgui.h>
-#include <imgui-SFML.h>
 #include "ThingScrollableWindow.h"
 #include "Things/Effects.h"
 #include "Things/ThingType.h"
@@ -10,7 +9,7 @@
 
 class EffectsScrollableWindow : public ThingScrollableWindow {
 public:
-    EffectsScrollableWindow(sf::RenderWindow& window, AssetsManager* am);
+    explicit EffectsScrollableWindow(AssetsManager* am);
     
     // Implement pure virtual methods from base class
     void drawTypeList(sf::Clock& deltaClock) override { drawEffectTypeList(deltaClock); }

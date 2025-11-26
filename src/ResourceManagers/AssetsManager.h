@@ -4,7 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <unordered_map>
-#include <SFML/Graphics.hpp>
+#include "../Graphics/SFMLCompat.h"
 #include <cstdint>
 #include "../Things/ItemType.h"
 #include "../Things/Items.h"

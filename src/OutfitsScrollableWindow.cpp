@@ -3,8 +3,8 @@
 #include "Misc/Warninger.h"
 #include "Things/ThingCategory.h"
 
-OutfitsScrollableWindow::OutfitsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: ThingScrollableWindow(window, am, ThingCategory::OUTFIT)
+OutfitsScrollableWindow::OutfitsScrollableWindow(AssetsManager* am)
+: ThingScrollableWindow(am, ThingCategory::OUTFIT)
 {
 }
 

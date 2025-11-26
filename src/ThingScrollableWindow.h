@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "Graphics/SFMLCompat.h"
 #include <imgui.h>
-#include <imgui-SFML.h>
 #include "ResourceManagers/AssetsManager.h"
 #include "Things/ThingCategory.h"
 #include "Misc/tools.h"
@@ -16,7 +15,7 @@
  */
 class ThingScrollableWindow {
 public:
-    ThingScrollableWindow(sf::RenderWindow& window, AssetsManager* am, ThingCategory category);
+    ThingScrollableWindow(AssetsManager* am, ThingCategory category);
     virtual ~ThingScrollableWindow() = default;
 
     // Pure virtual methods - must be implemented by derived classes
@@ -54,7 +53,6 @@ public:
     virtual void onPageChanged(int oldPage, int newPage, bool autoSelectFirst = true);
 
 protected:
-    sf::RenderWindow& window;
     AssetsManager* assetsManager;
     ThingCategory category;
     

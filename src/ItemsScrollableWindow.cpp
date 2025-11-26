@@ -6,8 +6,8 @@
 #include "Misc/definitions.h"
 #include "Things/ThingCategory.h"
 
-ItemsScrollableWindow::ItemsScrollableWindow(sf::RenderWindow& window, AssetsManager* am)
-: ThingScrollableWindow(window, am, ThingCategory::ITEM)
+ItemsScrollableWindow::ItemsScrollableWindow(AssetsManager* am)
+: ThingScrollableWindow(am, ThingCategory::ITEM)
 {
     // Clear search text field, there were weird '??' artifacts sometimes
     idInputBuffer[0] = '\0';

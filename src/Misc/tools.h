@@ -1,10 +1,11 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "imgui.h"
 #include "nfd.h"
 #include <algorithm>
-#include <SFML/Graphics.hpp>
+#include "../Graphics/SFMLCompat.h"
 #include "../Things/ItemType.h"
 #include "../Things/Items.h"
 
@@ -62,18 +63,17 @@ namespace Tools {
 
         // Create filter items dynamically based on input extensions
         int filtersCount = (int) extensions.size();
-        nfdu8filteritem_t filters[filtersCount];
+        std::vector<nfdu8filteritem_t> filters(filtersCount);
         for (int i = 0; i < filtersCount; i++) {
             const auto &ext = extensions[i];
-            filters[i] = {(ext + " Files").c_str(), ext.c_str()};
+            std::string name = ext + " Files";
+            std::string pattern = ext;
+            filters[i].name = name.c_str();
+            filters[i].spec = pattern.c_str();
         }
 
-        nfdopendialogu8args_t args = {0};
-        args.filterList = filters;
-        args.filterCount = filtersCount;
-
-        // Open the file dialog
-        nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+        // Open the file dialog using nativefiledialog-extended API
+        nfdresult_t result = NFD_OpenDialogU8(&outPath, filters.data(), filtersCount, nullptr);
         std::string chosenPath;
 
         if (result == NFD_OKAY) {
@@ -115,7 +115,7 @@ namespace Tools {
         NFD_Init();
         nfdu8char_t *outPath = nullptr;
 
-        nfdresult_t result = NFD_PickFolder(&outPath, nullptr);
+        nfdresult_t result = NFD_PickFolderU8(&outPath, nullptr);
         std::string chosenFolderPath;
 
         if (result == NFD_OKAY) {
@@ -402,7 +402,7 @@ namespace Tools {
 
     inline bool hasItemTypeInClipboard() {
 #ifdef _WIN32
-        static UINT format = RegisterClipboardFormat("ItemTypeBinary");
+        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
         return IsClipboardFormatAvailable(format) != 0;
 #elif __APPLE__
         @autoreleasepool {
@@ -595,7 +595,7 @@ namespace Tools {
         GlobalUnlock(hGlobal);  // Unlock memory
 
         // Register clipboard format once
-        static UINT format = RegisterClipboardFormat("ItemTypeBinary");
+        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
 
         // Empty clipboard and set new data
         EmptyClipboard();
@@ -624,7 +624,7 @@ namespace Tools {
 #ifdef _WIN32
         if (!OpenClipboard(nullptr)) return false;
 
-        static UINT format = RegisterClipboardFormat("ItemTypeBinary");
+        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
         HANDLE hData = GetClipboardData(format);
         if (!hData) {
             CloseClipboard();
