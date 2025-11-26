@@ -42,19 +42,71 @@ project "Sprforge"
         links {
             "AppKit.framework",
             "CoreGraphics.framework",
-            "Foundation.framework"
+            "Foundation.framework",
+            "OpenGL.framework",
+            "IOKit.framework",
+            "Cocoa.framework"
         }
         buildoptions { "-x objective-c++" }
+        
+        -- vcpkg integration for macOS
+        if os.getenv("VCPKG_ROOT") then
+            local vcpkg_root = os.getenv("VCPKG_ROOT")
+            local triplet = os.getenv("VCPKG_DEFAULT_TRIPLET") or "x64-osx"
+            includedirs { path.join(vcpkg_root, "installed", triplet, "include") }
+            libdirs { path.join(vcpkg_root, "installed", triplet, "lib") }
+            libdirs { path.join(vcpkg_root, "installed", triplet, "lib", "pkgconfig") }
+        end
+
+    filter "system:linux"
+        links {
+            "GL",
+            "X11",
+            "Xrandr",
+            "Xi",
+            "Xcursor",
+            "Xinerama",
+            "pthread",
+            "dl"
+        }
+        
+        -- vcpkg integration for Linux
+        if os.getenv("VCPKG_ROOT") then
+            local vcpkg_root = os.getenv("VCPKG_ROOT")
+            local triplet = os.getenv("VCPKG_DEFAULT_TRIPLET") or "x64-linux"
+            includedirs { path.join(vcpkg_root, "installed", triplet, "include") }
+            libdirs { path.join(vcpkg_root, "installed", triplet, "lib") }
+            libdirs { path.join(vcpkg_root, "installed", triplet, "lib", "pkgconfig") }
+        end
 
     filter {}
 
-    -- Libraries resolved via vcpkg manifest
-    links {
-        "glfw3dll",
-        "glad",
-        "tomlplusplus",
-        "nfd"
-    }
+    -- Libraries resolved via vcpkg manifest (Windows) or vcpkg (macOS/Linux)
+    filter "system:windows"
+        links {
+            "glfw3dll",
+            "glad",
+            "tomlplusplus",
+            "nfd"
+        }
+    
+    filter "system:linux"
+        links {
+            "glfw3",
+            "glad",
+            "tomlplusplus",
+            "nfd"
+        }
+    
+    filter "system:macosx"
+        links {
+            "glfw",
+            "glad",
+            "tomlplusplus",
+            "nfd"
+        }
+    
+    filter {}
 
     -- Custom include/library overrides (optional)
     newoption {
@@ -78,26 +130,54 @@ project "Sprforge"
     end
 
     -- Build configuration settings
-    filter "configurations:Debug"
+    filter { "configurations:Debug", "system:windows" }
         defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
         kind "ConsoleApp"
         linkoptions { "/SUBSYSTEM:CONSOLE" }
-		links {
-			"imguid",
-			"fmtd"
-		}
 
-    filter "configurations:Release"
+    filter { "configurations:Debug", "system:macosx" }
+        defines { "DEBUG" }
+        runtime "Debug"
+        symbols "On"
+        kind "ConsoleApp"
+
+    filter { "configurations:Debug", "system:linux" }
+        defines { "DEBUG" }
+        runtime "Debug"
+        symbols "On"
+        kind "ConsoleApp"
+
+    filter "configurations:Debug"
+        links {
+            "imguid",
+            "fmtd"
+        }
+
+    filter { "configurations:Release", "system:windows" }
         defines { "NDEBUG" }
         runtime "Release"
         optimize "On"
         kind "WindowedApp"
         linkoptions { "/SUBSYSTEM:WINDOWS" }
-		links {
-			"imgui",
-			"fmt"
-		}
 
-	filter {}
+    filter { "configurations:Release", "system:macosx" }
+        defines { "NDEBUG" }
+        runtime "Release"
+        optimize "On"
+        kind "WindowedApp"
+
+    filter { "configurations:Release", "system:linux" }
+        defines { "NDEBUG" }
+        runtime "Release"
+        optimize "On"
+        kind "WindowedApp"
+
+    filter "configurations:Release"
+        links {
+            "imgui",
+            "fmt"
+        }
+
+    filter {}
