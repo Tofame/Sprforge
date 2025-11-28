@@ -173,9 +173,7 @@ void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
         int colorValue = thing.lightBlock.lightColor;
         ImGui::SetNextItemWidth(labelWidth);
         if (ImGui::InputInt("##HasLightColorInt", &colorValue, 1, 5)) {
-            // Clamp to valid cube
-            if (colorValue < 0) colorValue = 0;
-            if (colorValue > 215) colorValue = 215;
+            colorValue = std::clamp(colorValue, 0, 215);
             lightColor = colorValue;
         }
 
@@ -252,9 +250,7 @@ void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
         int intensityValue = thing.lightBlock.lightIntensity;
         ImGui::SetNextItemWidth(labelWidth);
         if (ImGui::InputInt("##HasLightIntensityInt", &intensityValue, 1, 5)) {
-            // Clamp
-            if (intensityValue < 0) intensityValue = 0;
-            if (intensityValue > 10) intensityValue = 10;
+            intensityValue = std::clamp(intensityValue, 0, 10);
             lightIntensity = intensityValue;
         }
 
