@@ -541,6 +541,13 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
             
+            // Write minimap color if set
+            if (itemType->minimapColor > 0) {
+                uint8_t flag = 0x1C;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+                outFile.write(reinterpret_cast<const char*>(&itemType->minimapColor), sizeof(itemType->minimapColor));
+            }
+            
             // Write market data if name exists
             if (!itemType->name.empty()) {
                 uint8_t flag = 0x21;
@@ -846,6 +853,7 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                     case 0x1C: { // Minimap
                         uint16_t minimapColor = 0;
                         inFile.read(reinterpret_cast<char *>(&minimapColor), sizeof(minimapColor));
+                        itemType->minimapColor = minimapColor;
                         break;
                     }
                     case 0x1D: // LensHelp

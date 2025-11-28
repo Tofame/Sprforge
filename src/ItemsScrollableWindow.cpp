@@ -690,6 +690,93 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
         // --- Item Info Tab ---
         if (ImGui::BeginTabItem("Properties")) {
+            drawHasLightSegment(*previewIt);
+
+            // --- Minimap Color Section ---
+            if (ImGui::CollapsingHeader("Minimap Color", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+                // --- InputInt for manual color index ---
+                ImGui::Text("Selected Color:");
+                ImGui::SameLine();
+
+                int colorValue = previewIt->minimapColor;
+                ImGui::SetNextItemWidth(120.0f);
+                if (ImGui::InputInt("##MinimapColorInt", &colorValue, 1, 5)) {
+                    // Clamp to valid cube
+                    if (colorValue < 0) colorValue = 0;
+                    if (colorValue > 215) colorValue = 215;
+                    previewIt->minimapColor = colorValue;
+                }
+
+                // Compute current RGB
+                int cr = ((previewIt->minimapColor / 36) % 6) * 51;
+                int cg = ((previewIt->minimapColor / 6) % 6) * 51;
+                int cb = (previewIt->minimapColor % 6) * 51;
+
+                ImVec4 currentColor = ImVec4(cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+
+                ImGui::SameLine();
+
+                // The trigger button
+                if (ImGui::ColorButton("##CurrentMinimapColor", currentColor,
+                    ImGuiColorEditFlags_NoTooltip, ImVec2(30, 30)))
+                {
+                    ImGui::OpenPopup("MinimapColorPicker");
+                }
+
+                // Popup with color grid
+                if (ImGui::BeginPopup("MinimapColorPicker"))
+                {
+                    const int colorsPerRow = 16;
+                    const int totalColors = 216;
+                    const float buttonSize = 20.0f;
+                    const float spacing = 2.0f;
+
+                    ImGui::Text("Select Color:");
+                    ImGui::Separator();
+
+                    for (int idx = 0; idx < totalColors; ++idx)
+                    {
+                        int r = ((idx / 36) % 6) * 51;
+                        int g = ((idx / 6) % 6) * 51;
+                        int b = (idx % 6) * 51;
+                        ImVec4 c = ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+
+                        ImGui::PushID(idx);
+
+                        if (ImGui::ColorButton("##pick", c,
+                            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+                            ImVec2(buttonSize, buttonSize)))
+                        {
+                            previewIt->minimapColor = idx;
+                            ImGui::CloseCurrentPopup();
+                        }
+
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("ID: %d\nR: %d\nG: %d\nB: %d", idx, r, g, b);
+                        }
+
+                        // highlight selected color
+                        if (previewIt->minimapColor == idx)
+                        {
+                            ImVec2 min = ImGui::GetItemRectMin();
+                            ImVec2 max = ImGui::GetItemRectMax();
+                            ImGui::GetWindowDrawList()->AddRect(
+                                min, max, IM_COL32(255,255,0,255), 0.0f, 0, 2.0f);
+                        }
+
+                        ImGui::PopID();
+
+                        if ((idx + 1) % colorsPerRow != 0)
+                            ImGui::SameLine(0, spacing);
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                ImGui::NewLine();
+            }
+
             // Load and display properties checkboxes
             if (ImGui::CollapsingHeader("Flags", ImGuiTreeNodeFlags_DefaultOpen)) {
                 // Radio button group for mutually exclusive options
@@ -739,6 +826,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
                 ImGui::NewLine();
             }
+
             ImGui::EndTabItem();
         }
 
