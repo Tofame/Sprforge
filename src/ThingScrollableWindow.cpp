@@ -155,17 +155,12 @@ std::string ThingScrollableWindow::getRemoveButtonId() const {
 }
 
 void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
-    bool& hasLight = thing.lightBlock.hasLight;
     uint16_t& lightColor = thing.lightBlock.lightColor;
     uint16_t& lightIntensity = thing.lightBlock.lightIntensity;
-    ImGui::Checkbox("Has Light##HasLightCheckbox", &hasLight);
 
-    ImGui::SetNextItemOpen(hasLight, ImGuiCond_Always);
-    ImGuiTreeNodeFlags flags = hasLight ? 0 : ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-    bool open = ImGui::CollapsingHeader("Light Settings##HasLightSegment", flags);
+    bool open = ImGui::CollapsingHeader("Light Settings##HasLightSegment", ImGuiTreeNodeFlags_DefaultOpen);
     const float labelWidth = 120.0f;
-
-    if (hasLight && open) {
+    if (open) {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Light Color:");
         ImGui::SameLine(labelWidth);

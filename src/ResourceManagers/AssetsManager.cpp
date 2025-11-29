@@ -540,7 +540,7 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
                 uint8_t flag = 0x10;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
-            if (itemType->lightBlock.hasLight) {
+            if (itemType->hasLight()) {
                 uint8_t flag = 0x15;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
                 outFile.write(reinterpret_cast<const char*>(&itemType->lightBlock.lightIntensity), sizeof(itemType->lightBlock.lightIntensity));

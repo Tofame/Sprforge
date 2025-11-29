@@ -8,7 +8,6 @@
 struct LightBlock {
     uint16_t lightColor = 0;
     uint16_t lightIntensity = 0;
-    bool hasLight = 0;
 };
 
 // Base class for all thing types (items, outfits, effects, missiles)
@@ -33,6 +32,7 @@ public:
 
     // Properties that all child classes have
     LightBlock lightBlock;
+    bool hasLight() { return lightBlock.lightIntensity > 0 || lightBlock.lightColor > 0; };
 
     // Common methods
     void setWidth(int width);
