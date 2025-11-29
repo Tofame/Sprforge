@@ -77,6 +77,6 @@ protected:
     std::string getRemoveButtonId() const;
 
     // Helper methods for drawing needs shared between child class windows
-    void drawHasLightSegment(ThingType& thing);
+    void drawLightControlSegment(ThingType& thing);
 };
 

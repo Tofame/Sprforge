@@ -154,11 +154,11 @@ std::string ThingScrollableWindow::getRemoveButtonId() const {
     return std::string("Remove") + ThingCategoryToString(category) + "TypeFromList";
 }
 
-void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
+void ThingScrollableWindow::drawLightControlSegment(ThingType& thing) {
     uint16_t& lightColor = thing.lightBlock.lightColor;
     uint16_t& lightIntensity = thing.lightBlock.lightIntensity;
 
-    bool open = ImGui::CollapsingHeader("Light Settings##HasLightSegment", ImGuiTreeNodeFlags_DefaultOpen);
+    bool open = ImGui::CollapsingHeader("Light Settings##LightControlSegment", ImGuiTreeNodeFlags_DefaultOpen);
     const float labelWidth = 120.0f;
     if (open) {
         ImGui::AlignTextToFramePadding();
@@ -167,7 +167,7 @@ void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
 
         int colorValue = thing.lightBlock.lightColor;
         ImGui::SetNextItemWidth(labelWidth);
-        if (ImGui::InputInt("##HasLightColorInt", &colorValue, 1, 5)) {
+        if (ImGui::InputInt("##LightControlColorInt", &colorValue, 1, 5)) {
             colorValue = std::clamp(colorValue, 0, 215);
             lightColor = colorValue;
         }
@@ -182,14 +182,14 @@ void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
         ImGui::SameLine();
 
         // The trigger button
-        if (ImGui::ColorButton("##CurrentHasLightColor", currentColor,
+        if (ImGui::ColorButton("##CurrentLightControlColor", currentColor,
             ImGuiColorEditFlags_NoTooltip, ImVec2(30, 30)))
         {
-            ImGui::OpenPopup("HasLightColorPicker");
+            ImGui::OpenPopup("LightControlColorPicker");
         }
 
         // Popup with color grid
-        if (ImGui::BeginPopup("HasLightColorPicker"))
+        if (ImGui::BeginPopup("LightControlColorPicker"))
         {
             const int colorsPerRow = 16;
             const int totalColors = 216;
@@ -244,7 +244,7 @@ void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
 
         int intensityValue = thing.lightBlock.lightIntensity;
         ImGui::SetNextItemWidth(labelWidth);
-        if (ImGui::InputInt("##HasLightIntensityInt", &intensityValue, 1, 5)) {
+        if (ImGui::InputInt("##LightControlIntensityInt", &intensityValue, 1, 5)) {
             intensityValue = std::clamp(intensityValue, 0, 10);
             lightIntensity = intensityValue;
         }

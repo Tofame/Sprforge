@@ -833,7 +833,7 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                     case 0x14: // Rotatable
                         //itemType->rotatable = true;
                         break;
-                    case 0x15: { // HasLight
+                    case 0x15: { // LightControl
                         LightBlock lightBlock;
                         inFile.read(reinterpret_cast<char *>(&lightBlock.lightIntensity), sizeof(lightBlock.lightIntensity));
                         inFile.read(reinterpret_cast<char *>(&lightBlock.lightColor), sizeof(lightBlock.lightColor));

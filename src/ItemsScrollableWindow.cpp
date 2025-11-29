@@ -690,7 +690,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
         // --- Item Info Tab ---
         if (ImGui::BeginTabItem("Properties")) {
-            drawHasLightSegment(*previewIt);
+            drawLightControlSegment(*previewIt);
 
             // --- Minimap Color Section ---
             if (ImGui::CollapsingHeader("Minimap Color", ImGuiTreeNodeFlags_DefaultOpen)) {
