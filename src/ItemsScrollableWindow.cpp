@@ -694,17 +694,13 @@ void ItemsScrollableWindow::drawItemTypePanel() {
 
             // --- Minimap Color Section ---
             if (ImGui::CollapsingHeader("Minimap Color", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                // --- InputInt for manual color index ---
                 ImGui::Text("Selected Color:");
                 ImGui::SameLine();
 
                 int colorValue = previewIt->minimapColor;
                 ImGui::SetNextItemWidth(120.0f);
                 if (ImGui::InputInt("##MinimapColorInt", &colorValue, 1, 5)) {
-                    // Clamp to valid cube
-                    if (colorValue < 0) colorValue = 0;
-                    if (colorValue > 215) colorValue = 215;
+                    colorValue = std::clamp(colorValue, 0, 215);
                     previewIt->minimapColor = colorValue;
                 }
 
