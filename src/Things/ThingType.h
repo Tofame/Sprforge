@@ -6,9 +6,9 @@
 #include "ThingCategory.h"
 
 struct LightBlock {
+    uint16_t lightColor = 0;
+    uint16_t lightIntensity = 0;
     bool hasLight = 0;
-    uint8_t lightColor = 0;
-    uint8_t lightIntensity = 0;  
 };
 
 // Base class for all thing types (items, outfits, effects, missiles)

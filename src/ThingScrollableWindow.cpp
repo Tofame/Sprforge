@@ -156,8 +156,8 @@ std::string ThingScrollableWindow::getRemoveButtonId() const {
 
 void ThingScrollableWindow::drawHasLightSegment(ThingType& thing) {
     bool& hasLight = thing.lightBlock.hasLight;
-    uint8_t& lightColor = thing.lightBlock.lightColor;
-    uint8_t& lightIntensity = thing.lightBlock.lightIntensity;
+    uint16_t& lightColor = thing.lightBlock.lightColor;
+    uint16_t& lightIntensity = thing.lightBlock.lightIntensity;
     ImGui::Checkbox("Has Light##HasLightCheckbox", &hasLight);
 
     ImGui::SetNextItemOpen(hasLight, ImGuiCond_Always);
