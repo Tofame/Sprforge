@@ -34,6 +34,7 @@ public:
 
     std::string name;
     uint16_t speed = 0;
+    uint16_t minimapColor = 0; // Minimap color (0-255)
     ItemCategory_t itemCategory = COMMON;
 
     // Wrapper methods for backward compatibility
@@ -49,6 +50,7 @@ public:
         return ThingType::operator==(other) &&
                itemTypeFlags == other.itemTypeFlags &&
                speed == other.speed &&
+               minimapColor == other.minimapColor &&
                itemCategory == other.itemCategory &&
                name == other.name;
     }

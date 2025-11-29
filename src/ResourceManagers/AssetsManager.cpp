@@ -540,7 +540,19 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
                 uint8_t flag = 0x10;
                 outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
             }
-            
+            if (itemType->hasLight()) {
+                uint8_t flag = 0x15;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+                outFile.write(reinterpret_cast<const char*>(&itemType->lightBlock.lightIntensity), sizeof(itemType->lightBlock.lightIntensity));
+                outFile.write(reinterpret_cast<const char*>(&itemType->lightBlock.lightColor), sizeof(itemType->lightBlock.lightColor));
+            }
+            // Write minimap color if set
+            if (itemType->minimapColor > 0) {
+                uint8_t flag = 0x1C;
+                outFile.write(reinterpret_cast<const char*>(&flag), sizeof(flag));
+                outFile.write(reinterpret_cast<const char*>(&itemType->minimapColor), sizeof(itemType->minimapColor));
+            }
+
             // Write market data if name exists
             if (!itemType->name.empty()) {
                 uint8_t flag = 0x21;
@@ -821,11 +833,11 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                     case 0x14: // Rotatable
                         //itemType->rotatable = true;
                         break;
-                    case 0x15: { // HasLight
-                        uint16_t lightLevel = 0;
-                        uint16_t lightColor = 0;
-                        inFile.read(reinterpret_cast<char *>(&lightLevel), sizeof(lightLevel));
-                        inFile.read(reinterpret_cast<char *>(&lightColor), sizeof(lightColor));
+                    case 0x15: { // LightControl
+                        LightBlock lightBlock;
+                        inFile.read(reinterpret_cast<char *>(&lightBlock.lightIntensity), sizeof(lightBlock.lightIntensity));
+                        inFile.read(reinterpret_cast<char *>(&lightBlock.lightColor), sizeof(lightBlock.lightColor));
+                        itemType->lightBlock = lightBlock;
                         break;
                     }
                     case 0x16: // DontHide
@@ -846,6 +858,7 @@ void AssetsManager::loadOTDat(const std::string &datFilePath) {
                     case 0x1C: { // Minimap
                         uint16_t minimapColor = 0;
                         inFile.read(reinterpret_cast<char *>(&minimapColor), sizeof(minimapColor));
+                        itemType->minimapColor = minimapColor;
                         break;
                     }
                     case 0x1D: // LensHelp

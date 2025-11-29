@@ -5,6 +5,11 @@
 #include <vector>
 #include "ThingCategory.h"
 
+struct LightBlock {
+    uint16_t lightColor = 0;
+    uint16_t lightIntensity = 0;
+};
+
 // Base class for all thing types (items, outfits, effects, missiles)
 class ThingType {
 public:
@@ -24,6 +29,10 @@ public:
     uint8_t patternY = 1;
     uint8_t patternZ = 1;
     uint8_t layers = 1;
+
+    // Properties that all child classes have
+    LightBlock lightBlock;
+    bool hasLight() { return lightBlock.lightIntensity > 0 || lightBlock.lightColor > 0; };
 
     // Common methods
     void setWidth(int width);

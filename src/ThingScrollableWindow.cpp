@@ -154,3 +154,101 @@ std::string ThingScrollableWindow::getRemoveButtonId() const {
     return std::string("Remove") + ThingCategoryToString(category) + "TypeFromList";
 }
 
+void ThingScrollableWindow::drawLightControlSegment(ThingType& thing) {
+    uint16_t& lightColor = thing.lightBlock.lightColor;
+    uint16_t& lightIntensity = thing.lightBlock.lightIntensity;
+
+    bool open = ImGui::CollapsingHeader("Light Settings##LightControlSegment", ImGuiTreeNodeFlags_DefaultOpen);
+    const float labelWidth = 120.0f;
+    if (open) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Light Color:");
+        ImGui::SameLine(labelWidth);
+
+        int colorValue = thing.lightBlock.lightColor;
+        ImGui::SetNextItemWidth(labelWidth);
+        if (ImGui::InputInt("##LightControlColorInt", &colorValue, 1, 5)) {
+            colorValue = std::clamp(colorValue, 0, 215);
+            lightColor = colorValue;
+        }
+
+        // Compute current RGB
+        int cr = ((lightColor / 36) % 6) * 51;
+        int cg = ((lightColor / 6) % 6) * 51;
+        int cb = (lightColor % 6) * 51;
+
+        ImVec4 currentColor = ImVec4(cr / 255.0f, cg / 255.0f, cb / 255.0f, 1.0f);
+
+        ImGui::SameLine();
+
+        // The trigger button
+        if (ImGui::ColorButton("##CurrentLightControlColor", currentColor,
+            ImGuiColorEditFlags_NoTooltip, ImVec2(30, 30)))
+        {
+            ImGui::OpenPopup("LightControlColorPicker");
+        }
+
+        // Popup with color grid
+        if (ImGui::BeginPopup("LightControlColorPicker"))
+        {
+            const int colorsPerRow = 16;
+            const int totalColors = 216;
+            const float buttonSize = 20.0f;
+            const float spacing = 2.0f;
+
+            ImGui::Text("Select Color:");
+            ImGui::Separator();
+
+            for (int idx = 0; idx < totalColors; ++idx)
+            {
+                int r = ((idx / 36) % 6) * 51;
+                int g = ((idx / 6) % 6) * 51;
+                int b = (idx % 6) * 51;
+                ImVec4 c = ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+
+                ImGui::PushID(idx);
+
+                if (ImGui::ColorButton("##pick", c,
+                    ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+                    ImVec2(buttonSize, buttonSize)))
+                {
+                    lightColor = idx;
+                    ImGui::CloseCurrentPopup();
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("ID: %d\nR: %d\nG: %d\nB: %d", idx, r, g, b);
+                }
+
+                // highlight selected color
+                if (lightColor == idx)
+                {
+                    ImVec2 min = ImGui::GetItemRectMin();
+                    ImVec2 max = ImGui::GetItemRectMax();
+                    ImGui::GetWindowDrawList()->AddRect(
+                        min, max, IM_COL32(255,255,0,255), 0.0f, 0, 2.0f);
+                }
+
+                ImGui::PopID();
+
+                if ((idx + 1) % colorsPerRow != 0)
+                    ImGui::SameLine(0, spacing);
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Light Intensity:");
+        ImGui::SameLine(labelWidth);
+
+        int intensityValue = thing.lightBlock.lightIntensity;
+        ImGui::SetNextItemWidth(labelWidth);
+        if (ImGui::InputInt("##LightControlIntensityInt", &intensityValue, 1, 5)) {
+            intensityValue = std::clamp(intensityValue, 0, 10);
+            lightIntensity = intensityValue;
+        }
+
+        ImGui::NewLine();
+    }
+}

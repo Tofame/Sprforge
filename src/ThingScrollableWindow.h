@@ -75,5 +75,8 @@ protected:
     std::string getInputTextFieldId() const;
     std::string getNewButtonId() const;
     std::string getRemoveButtonId() const;
+
+    // Helper methods for drawing needs shared between child class windows
+    void drawLightControlSegment(ThingType& thing);
 };
 
