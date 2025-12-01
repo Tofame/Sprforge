@@ -47,7 +47,7 @@ public:
         return selectedButtonIndex >= 0 && selectedButtonIndex < assetsManager->getTextureCount();
     }
     void setSelectedButtonIndex(int id, bool goToSelect = true) {
-        if (id < 0 | id > getTotalButtons()) {
+        if (id < 0 || id > getTotalButtons()) {
             return;
         }
 

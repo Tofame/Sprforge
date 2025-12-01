@@ -214,7 +214,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
     ImGui::Text("Range: %d-%d", startIndex, endIndex - 1);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(50);
-    if (ImGui::InputText("Sprite Id##SpriteIdSearchTextField", idInputBuffer, sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
+    if (ImGui::InputText("Sprite Id##SpriteIdSearchTextField", idInputBuffer, (int)sizeof(idInputBuffer), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
         int inputId = 0;
         try {
             inputId = std::stoi(idInputBuffer);
@@ -292,14 +292,14 @@ void SpritesScrollableWindow::drawListControlButtons() {
         } else {
             assetsManager->removeTexture(selectedButtonIndex);
             setUnsavedChanges(true);
-            selectedButtonIndex = assetsManager->getTextureCount() - 1;
+            selectedButtonIndex = (int)assetsManager->getTextureCount() - 1;
         }
     }
     ImGui::EndGroup();
 
     if (ImGui::BeginPopupModal("Export Sprite Popup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Name:");
-        ImGui::InputText("##name", &spriteName[0], spriteName.size() + 1);
+        ImGui::InputText("##name", &spriteName[0], (int)(spriteName.size() + 1));
 
         ImGui::Text("Output Folder:");
         if (!Tools::isValidFolderPath(outputFolder)) {
@@ -307,7 +307,7 @@ void SpritesScrollableWindow::drawListControlButtons() {
             ImGui::Text("Invalid path!");
         }
         ImGui::PushItemWidth(200);
-        ImGui::InputText("##folder", &outputFolder[0], outputFolder.size() + 1);
+        ImGui::InputText("##folder", &outputFolder[0], (int)(outputFolder.size() + 1));
         ImGui::SameLine();
         if (ImGui::Button("Browse")) {
             std::string selectedFolder = Tools::openFileDialogChooseFolder();

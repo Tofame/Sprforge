@@ -68,7 +68,7 @@ public:
         return selectedItemIndex;
     }
     bool isAnyButtonSelected() override {
-        return selectedItemIndex >= 0 && selectedItemIndex < Items::getItemTypesCount();
+        return selectedItemIndex >= 0 && selectedItemIndex < (int)Items::getItemTypesCount();
     }
     
     // Items-specific pagination methods

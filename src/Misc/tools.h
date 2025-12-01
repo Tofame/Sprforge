@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 #include "imgui.h"
 #include "nfd.h"
 #include <algorithm>
@@ -183,9 +184,9 @@ namespace Tools {
     }
 
     inline std::string formatDuration(std::chrono::milliseconds duration) {
-        int minutes = duration.count() / 60000;
-        int seconds = (duration.count() % 60000) / 1000;
-        return std::to_string(minutes) + " min " + std::to_string(seconds) + " sec";
+        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration - minutes);
+        return std::to_string(minutes.count()) + " min " + std::to_string(seconds.count()) + " sec";
     }
 
     inline std::string trim(const std::string &str) {

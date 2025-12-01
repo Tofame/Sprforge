@@ -613,9 +613,9 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
             }
 
             // Calculate and write sprite IDs in correct order
-            uint32_t numSprites = itemType->width * itemType->height * layers *
-                                 patternX * patternY * patternZ *
-                                 animationsFrames;
+            uint32_t numSprites = static_cast<uint32_t>(itemType->width) * static_cast<uint32_t>(itemType->height) * static_cast<uint32_t>(layers) *
+                                 static_cast<uint32_t>(patternX) * static_cast<uint32_t>(patternY) * static_cast<uint32_t>(patternZ) *
+                                 static_cast<uint32_t>(animationsFrames);
             
             // Write sprites in the same order as they're stored in textureIdsVector
             for (uint32_t i = 0; i < numSprites && i < itemType->textureIdsVector.size(); ++i) {
@@ -1616,9 +1616,9 @@ void AssetsManager::loadThingTypePatterns(std::istream& inFile, std::shared_ptr<
     }
 
     // Calculate number of sprites
-    uint32_t numSprites = thingType->width * thingType->height * thingType->layers *
-                          thingType->patternX * thingType->patternY * thingType->patternZ *
-                          thingType->animationsFrames;
+    uint32_t numSprites = static_cast<uint32_t>(thingType->width) * static_cast<uint32_t>(thingType->height) * static_cast<uint32_t>(thingType->layers) *
+                          static_cast<uint32_t>(thingType->patternX) * static_cast<uint32_t>(thingType->patternY) * static_cast<uint32_t>(thingType->patternZ) *
+                          static_cast<uint32_t>(thingType->animationsFrames);
 
     // Resize vector to hold all sprites
     thingType->textureIdsVector.resize(numSprites, 0);
@@ -1918,7 +1918,7 @@ void AssetsManager::doPopupAssetsCompileAs() {
     ImGui::Spacing();
 
     ImGui::Text("Output Folder:");
-    ImGui::InputText("##OutputPath", &m_assetsInfo.outputPath, m_assetsInfo.outputPath.size());
+    ImGui::InputText("##OutputPath", &m_assetsInfo.outputPath);
     ImGui::SameLine();
     if (ImGui::Button("Browse")) {
         auto selectedFolder = Tools::openFileDialogChooseFolder();

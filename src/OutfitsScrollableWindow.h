@@ -28,7 +28,7 @@ public:
     // Override base class methods
     int getTotalButtons() const override { return (int)Outfits::getOutfitTypesCount(); }
     int getSelectedButtonIndex() override { return selectedOutfitIndex; }
-    bool isAnyButtonSelected() override { return selectedOutfitIndex >= 0 && selectedOutfitIndex < Outfits::getOutfitTypesCount(); }
+    bool isAnyButtonSelected() override { return selectedOutfitIndex >= 0 && selectedOutfitIndex < (int)Outfits::getOutfitTypesCount(); }
 
 private:
     inline static int selectedOutfitIndex = -1;

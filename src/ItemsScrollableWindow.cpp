@@ -286,7 +286,7 @@ void ItemsScrollableWindow::exportItem(Tools::EXPORT_OPTIONS option) {
 }
 
 void ItemsScrollableWindow::setSelectedButtonIndex(int id, bool goToSelect) {
-    if (id < 0 | id > getTotalButtons()) {
+    if (id < 0 || id > getTotalButtons()) {
         return;
     }
 
@@ -442,7 +442,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 auto oldPos = ImGui::GetCursorPos();
                 auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
 
-                ImVec2 centeredPos(groupSize.x / 2.0f - ((spriteMaxSize * previewIt->width) / 2.0f), oldPos.y);
+                ImVec2 centeredPos(groupSize.x / 2.0f - ((static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->width)) / 2.0f), oldPos.y);
                 centeredPos.x += spriteMaxSize/4; // Small magic number correction because we couldn't center...
                 ImVec2 gridPos = centeredPos; // assignment here is unimportant, we use trick below to get gridPos...
                 // There were a lot of problems to draw grid on the preview images, so I settled on a trick.
@@ -564,7 +564,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 }
 
                 //ImVec2 gridPos = ImGui::GetItemRectMin(); // ImGui::GetItemRectMin()
-                ImVec2 gridTotalSize = ImVec2(spriteMaxSize * previewIt->width, spriteMaxSize * previewIt->height);
+                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->width), static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->height));
                 if (drawGrid) {
                     for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
                         ImGui::GetWindowDrawList()->AddLine(
@@ -617,7 +617,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                     ImGui::Text("Animations:");
 
                     ImGui::TableNextColumn();
-                    ImGui::PushItemWidth(groupSize.x * 0.20);
+                    ImGui::PushItemWidth(groupSize.x * 0.20f);
 
                     int width = tempCopyIt.width;
                     if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {

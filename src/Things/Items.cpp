@@ -117,7 +117,7 @@ bool Items::importItemToml(const std::string& filePath) {
     toml::table itemData;
     try {
         itemData = toml::parse_file(filePath);
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         Warninger::sendWarning(FUNC_NAME, "Failed to parse TOML file: " + filePath);
         return false;
     }

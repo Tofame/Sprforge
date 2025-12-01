@@ -143,7 +143,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                         {{"SW", 0, 2, false}, {"S", 1, 2, false}, {"SE", 2, 2, false}}
                     };
                     
-                    float cellSize = spriteMaxSize * std::max(unsavedMissileType->width, unsavedMissileType->height);
+                    float cellSize = static_cast<float>(spriteMaxSize) * std::max(unsavedMissileType->width, unsavedMissileType->height);
                     float tableWidth = cellSize * 3;
                     
                     // Center the table horizontally
@@ -216,7 +216,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                     }
                 } else {
                     // Fallback: show single direction if patternX/patternY < 3
-                    ImVec2 previewAreaSize(spriteMaxSize * unsavedMissileType->width, spriteMaxSize * unsavedMissileType->height);
+                    ImVec2 previewAreaSize(static_cast<float>(spriteMaxSize) * unsavedMissileType->width, static_cast<float>(spriteMaxSize) * unsavedMissileType->height);
                     ImVec2 previewAreaMin = centeredPos;
                     ImVec2 previewAreaMax(previewAreaMin.x + previewAreaSize.x, previewAreaMin.y + previewAreaSize.y);
                     ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
@@ -299,7 +299,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                 }
 
 
-                ImVec2 gridTotalSize = ImVec2(spriteMaxSize * unsavedMissileType->width, spriteMaxSize * unsavedMissileType->height);
+                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * unsavedMissileType->width, static_cast<float>(spriteMaxSize) * unsavedMissileType->height);
                 if (drawGrid) {
                     for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
                         ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x + x, gridPos.y), ImVec2(gridPos.x + x, gridPos.y + gridTotalSize.y),
@@ -337,7 +337,7 @@ void MissilesScrollableWindow::drawMissileTypePanel() {
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Animations:");
                     ImGui::TableNextColumn();
-                    ImGui::PushItemWidth(groupSize.x * 0.20);
+                    ImGui::PushItemWidth(groupSize.x * 0.20f);
                     int width = unsavedMissileType->width;
                     if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         width = std::clamp(width, 1, ConfigManager::getInstance()->getItemMaxWidth());

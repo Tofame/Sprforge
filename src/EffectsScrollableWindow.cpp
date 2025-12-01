@@ -124,7 +124,7 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                 ImGui::Text("Texture Preview (Drop sprites here)");
                 auto oldPos = ImGui::GetCursorPos();
                 auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
-                ImVec2 centeredPos(groupSize.x / 2.0f - ((spriteMaxSize * unsavedEffectType->width) / 2.0f), oldPos.y);
+                ImVec2 centeredPos(groupSize.x / 2.0f - ((static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedEffectType->width)) / 2.0f), oldPos.y);
                 centeredPos.x += spriteMaxSize/4;
                 ImVec2 gridPos = centeredPos;
                 ImVec2 previewAreaSize(spriteMaxSize * unsavedEffectType->width, spriteMaxSize * unsavedEffectType->height);
@@ -206,7 +206,7 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                         animationClock.restart();
                     }
                 }
-                ImVec2 gridTotalSize = ImVec2(spriteMaxSize * unsavedEffectType->width, spriteMaxSize * unsavedEffectType->height);
+                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedEffectType->width), static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedEffectType->height));
                 if (drawGrid) {
                     for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
                         ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x + x, gridPos.y), ImVec2(gridPos.x + x, gridPos.y + gridTotalSize.y),
@@ -229,7 +229,7 @@ void EffectsScrollableWindow::drawEffectTypePanel() {
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Width:"); ImGui::Text("Height:"); ImGui::Text("Layers:"); ImGui::Text("Pattern X:"); ImGui::Text("Pattern Y:"); ImGui::Text("Pattern Z:"); ImGui::Text("Animations:");
                     ImGui::TableNextColumn();
-                    ImGui::PushItemWidth(groupSize.x * 0.20);
+                    ImGui::PushItemWidth(groupSize.x * 0.20f);
                     int width = unsavedEffectType->width;
                     if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
                         width = std::clamp(width, 1, ConfigManager::getInstance()->getItemMaxWidth());

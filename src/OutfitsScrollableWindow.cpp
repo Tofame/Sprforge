@@ -147,7 +147,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                 auto oldPos = ImGui::GetCursorPos();
                 auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
 
-                ImVec2 centeredPos(groupSize.x / 2.0f - ((spriteMaxSize * unsavedOutfitType->width) / 2.0f), oldPos.y);
+                ImVec2 centeredPos(groupSize.x / 2.0f - ((static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width)) / 2.0f), oldPos.y);
                 centeredPos.x += spriteMaxSize/4;
                 ImVec2 gridPos = centeredPos;
 
@@ -334,7 +334,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     }
                 }
 
-                ImVec2 gridTotalSize = ImVec2(spriteMaxSize * unsavedOutfitType->width, spriteMaxSize * unsavedOutfitType->height);
+                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width), static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->height));
                 if (drawGrid) {
                     for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
                         ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x + x, gridPos.y), ImVec2(gridPos.x + x, gridPos.y + gridTotalSize.y),
@@ -374,7 +374,7 @@ void OutfitsScrollableWindow::drawOutfitTypePanel() {
                     ImGui::Text("Animations:");
 
                     ImGui::TableNextColumn();
-                    ImGui::PushItemWidth(groupSize.x * 0.20);
+                    ImGui::PushItemWidth(groupSize.x * 0.20f);
 
                     int width = unsavedOutfitType->width;
                     if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {

@@ -28,7 +28,7 @@ public:
     // Override base class methods
     int getTotalButtons() const override { return (int)Effects::getEffectTypesCount(); }
     int getSelectedButtonIndex() override { return selectedEffectIndex; }
-    bool isAnyButtonSelected() override { return selectedEffectIndex >= 0 && selectedEffectIndex < Effects::getEffectTypesCount(); }
+    bool isAnyButtonSelected() override { return selectedEffectIndex >= 0 && selectedEffectIndex < (int)Effects::getEffectTypesCount(); }
 
 private:
     inline static int selectedEffectIndex = -1;

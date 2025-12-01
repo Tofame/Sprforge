@@ -28,7 +28,7 @@ public:
     // Override base class methods
     int getTotalButtons() const override { return (int)Missiles::getMissileTypesCount(); }
     int getSelectedButtonIndex() override { return selectedMissileIndex; }
-    bool isAnyButtonSelected() override { return selectedMissileIndex >= 0 && selectedMissileIndex < Missiles::getMissileTypesCount(); }
+    bool isAnyButtonSelected() override { return selectedMissileIndex >= 0 && selectedMissileIndex < (int)Missiles::getMissileTypesCount(); }
 
 private:
     inline static int selectedMissileIndex = -1;
