@@ -31,6 +31,8 @@ void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
     assetsManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different item
     isAnimationPlaying = false;
+    // Reset layer selection when selecting a different item
+    selectedLayer = 0;
     // To know what we selected most recently
     assetsManager->setLastSelectedItemId(id);
 
@@ -463,6 +465,9 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 // Draw transparent/black background to clear previous sprites
                 ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
 
+                // Clamp selected layer to valid bounds
+                int layerIdx = std::clamp(selectedLayer, 0, (int)previewIt->layers - 1);
+
                 // Loop through all patterns and display them in a grid
                 // Rows: patternY (top to bottom)
                 // Columns: patternZ * patternX (left to right, Z varies slowest, X varies fastest)
@@ -472,56 +477,54 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                             // Calculate column index: pZ * patternX + pX
                             int colIdx = pZ * previewIt->patternX + pX;
                             
-                            // Draw all sprites (width x height) for this pattern cell
-                            for (int l = 0; l < previewIt->layers; l++) {
-                                for (int w = 0; w < previewIt->width; w++) {
-                                    for (int h = 0; h < previewIt->height; h++) {
-                                        int spriteIndex = assetsManager->getTextureIdFromItemType(
-                                            previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
-                                            l, pX, pY, pZ);
-                                        auto texture = assetsManager->getTexture(spriteIndex);
+                            // Draw all sprites (width x height) for this pattern cell using selected layer
+                            for (int w = 0; w < previewIt->width; w++) {
+                                for (int h = 0; h < previewIt->height; h++) {
+                                    int spriteIndex = assetsManager->getTextureIdFromItemType(
+                                        previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
+                                        layerIdx, pX, pY, pZ);
+                                    auto texture = assetsManager->getTexture(spriteIndex);
 
-                                        if (texture) {
-                                            ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
+                                    if (texture) {
+                                        ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
 
-                                            // Calculate position:
-                                            // Base position + column offset + cell-internal offset (flipped)
-                                            auto tempPos = centeredPos;
-                                            tempPos.x += static_cast<float>(colIdx * cellPixelWidth);
-                                            tempPos.y += static_cast<float>(pY * cellPixelHeight);
-                                            // Flipped positioning within the cell
-                                            tempPos.x += std::floor((float)(previewIt->width - w - 1) * spriteMaxSize);
-                                            tempPos.y += std::floor((float)(previewIt->height - h - 1) * spriteMaxSize);
-                                            
-                                            ImGui::SetCursorPos(tempPos);
-                                            ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
+                                        // Calculate position:
+                                        // Base position + column offset + cell-internal offset (flipped)
+                                        auto tempPos = centeredPos;
+                                        tempPos.x += static_cast<float>(colIdx * cellPixelWidth);
+                                        tempPos.y += static_cast<float>(pY * cellPixelHeight);
+                                        // Flipped positioning within the cell
+                                        tempPos.x += std::floor((float)(previewIt->width - w - 1) * spriteMaxSize);
+                                        tempPos.y += std::floor((float)(previewIt->height - h - 1) * spriteMaxSize);
+                                        
+                                        ImGui::SetCursorPos(tempPos);
+                                        ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
 
-                                            if (ImGui::IsItemHovered()) {
-                                                ImGui::SetTooltip("Sprite: %d\nPos: w=%d, h=%d, l=%d\nPattern: X=%d, Y=%d, Z=%d", 
-                                                    spriteIndex, w, h, l, pX, pY, pZ);
-                                            }
-
-                                            // Handle drag-and-drop target
-                                            if (ImGui::BeginDragDropTarget()) {
-                                                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
-                                                    int newTextureId = *(int *) payload->Data;
-                                                    assetsManager->setTextureIdFromItemType(
-                                                        previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
-                                                        newTextureId, l, pX, pY, pZ);
-                                                    // Force preview update
-                                                    assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
-                                                }
-                                                ImGui::EndDragDropTarget();
-                                            }
-
-                                            // Set grid position from the top-left corner (first pattern cell, first sprite)
-                                            if (pX == 0 && pY == 0 && pZ == 0 && 
-                                                w == previewIt->width - 1 && h == previewIt->height - 1 && l == 0) {
-                                                gridPos = ImGui::GetItemRectMin();
-                                            }
-                                        } else {
-                                            Warninger::sendWarning(FUNC_NAME, "No texture detected while displaying item's textures");
+                                        if (ImGui::IsItemHovered()) {
+                                            ImGui::SetTooltip("Sprite: %d\nPos: w=%d, h=%d\nLayer: %d\nPattern: X=%d, Y=%d, Z=%d", 
+                                                spriteIndex, w, h, layerIdx, pX, pY, pZ);
                                         }
+
+                                        // Handle drag-and-drop target
+                                        if (ImGui::BeginDragDropTarget()) {
+                                            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
+                                                int newTextureId = *(int *) payload->Data;
+                                                assetsManager->setTextureIdFromItemType(
+                                                    previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
+                                                    newTextureId, layerIdx, pX, pY, pZ);
+                                                // Force preview update
+                                                assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
+                                            }
+                                            ImGui::EndDragDropTarget();
+                                        }
+
+                                        // Set grid position from the top-left corner (first pattern cell, first sprite)
+                                        if (pX == 0 && pY == 0 && pZ == 0 && 
+                                            w == previewIt->width - 1 && h == previewIt->height - 1) {
+                                            gridPos = ImGui::GetItemRectMin();
+                                        }
+                                    } else {
+                                        Warninger::sendWarning(FUNC_NAME, "No texture detected while displaying item's textures");
                                     }
                                 }
                             }
@@ -563,6 +566,16 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
+                }
+
+                // Layer slider (only show when item has multiple layers)
+                if (previewIt->layers > 1) {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(width);
+                    ImGui::SliderInt("Layer", &selectedLayer, 0, previewIt->layers - 1, "%d");
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+                    ImGui::Text("(%d/%d)", selectedLayer + 1, previewIt->layers);
                 }
 
                 // Animation loop logic

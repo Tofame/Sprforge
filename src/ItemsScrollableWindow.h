@@ -103,6 +103,9 @@ private:
     std::string itemName;
 
     uint32_t rightMenuClickedItem = 0;
+    
+    // Layer selection for preview (when item has multiple layers)
+    int selectedLayer = 0;
 
     void drawGUIItemTypeExport();
     void handleItemTypeImport();
