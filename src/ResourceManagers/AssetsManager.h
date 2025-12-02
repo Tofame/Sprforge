@@ -266,22 +266,23 @@ public:
     void clearPreviewTextures();
 
     /**
-     * @brief Returns a sprite sheet of a thing type
+     * @brief Creates a preview image for a ThingType
      *
-     * Example use, is to call this method with animations = 1, which
-     * will effectively help us with creating a preview texture for a thingtype.
-     * Another example, is animations = max thing's animations, to get full sprite sheet
-     * used in exporting the thing's png etc.
+     * Creates a simple width*height preview image for displaying in the UI.
+     * Uses first pattern (0,0,0) only.
      *
-     * @param thingTypeId id of thingType that we will be creating sprite sheet based on
-     * @param animations of how many thing's animation frames should the sprite sheet be composed of
-     * @param category Category of the thing type
-     * @return sf::Texture that is composed of however many animation frames were requested in animations param
+     * @param thingTypeId ID of the ThingType to create preview for
+     * @param category Category of the thing type (ITEM, OUTFIT, EFFECT, MISSILE)
+     * @param animationFrame Which animation frame to render (1-based, default 1)
+     * @param allLayers If true, renders all layers blended together; if false, only first layer
+     * @return sf::Texture containing the preview image
      */
-    sf::Texture getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category = ThingCategory::ITEM);
+    sf::Texture getPreviewImage(int thingTypeId, ThingCategory category, int animationFrame = 1, bool allLayers = true);
     
-    // Wrapper for backward compatibility
-    sf::Texture getItemSpriteSheet(int itemTypeId, int animations) { return getThingSpriteSheet(itemTypeId, animations, ThingCategory::ITEM); }
+    /**
+     * @brief Creates a full sprite sheet for export (all animation frames stacked vertically)
+     */
+    sf::Texture getItemSpriteSheet(int itemTypeId, int animations);
     
 
     // Helper methods, it is a trick used

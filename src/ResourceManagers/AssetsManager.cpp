@@ -54,20 +54,44 @@ void BlitImage(sf::Image& destination, const sf::Image& source, unsigned destX, 
         return;
     }
 
-    const uint8_t* srcPixels = source.getPixelsPtr();
-    uint8_t* destPixels = destination.getPixelsPtr();
-    const unsigned maxWidth = (destX < destSize.x) ? std::min(srcSize.x, destSize.x - destX) : 0;
-    if (maxWidth == 0) {
-        return;
-    }
-
+    // Alpha blending: blend source onto destination respecting transparency
     for (unsigned y = 0; y < srcSize.y; ++y) {
         if (destY + y >= destSize.y) {
             break;
         }
-        size_t srcIndex = (static_cast<size_t>(y) * srcSize.x) * 4;
-        size_t destIndex = (static_cast<size_t>(destY + y) * destSize.x + destX) * 4;
-        std::memcpy(destPixels + destIndex, srcPixels + srcIndex, static_cast<size_t>(maxWidth) * 4);
+        for (unsigned x = 0; x < srcSize.x; ++x) {
+            if (destX + x >= destSize.x) {
+                break;
+            }
+            
+            sf::Color srcColor = source.getPixel({x, y});
+            
+            // Skip fully transparent pixels
+            if (srcColor.a == 0) {
+                continue;
+            }
+            
+            // Fully opaque source pixel - just copy it
+            if (srcColor.a == 255) {
+                destination.setPixel({destX + x, destY + y}, srcColor);
+                continue;
+            }
+            
+            // Alpha blending for semi-transparent pixels
+            sf::Color dstColor = destination.getPixel({destX + x, destY + y});
+            float srcAlpha = srcColor.a / 255.0f;
+            float dstAlpha = dstColor.a / 255.0f;
+            float outAlpha = srcAlpha + dstAlpha * (1.0f - srcAlpha);
+            
+            if (outAlpha > 0.0f) {
+                sf::Color blended;
+                blended.r = static_cast<uint8_t>((srcColor.r * srcAlpha + dstColor.r * dstAlpha * (1.0f - srcAlpha)) / outAlpha);
+                blended.g = static_cast<uint8_t>((srcColor.g * srcAlpha + dstColor.g * dstAlpha * (1.0f - srcAlpha)) / outAlpha);
+                blended.b = static_cast<uint8_t>((srcColor.b * srcAlpha + dstColor.b * dstAlpha * (1.0f - srcAlpha)) / outAlpha);
+                blended.a = static_cast<uint8_t>(outAlpha * 255.0f);
+                destination.setPixel({destX + x, destY + y}, blended);
+            }
+        }
     }
 }
 
@@ -1277,7 +1301,7 @@ void AssetsManager::createPreviewTexture(int id, ThingCategory category) {
         return;
     }
 
-    auto thingPreviewTexture = getThingSpriteSheet(id, 1, category);
+    auto thingPreviewTexture = getPreviewImage(id, category, 1, true);
     
     if (thingPreviewTexture.getSize().x == 0 || thingPreviewTexture.getSize().y == 0) {
         if (id >= previewTextures.size()) {
@@ -1364,7 +1388,7 @@ void AssetsManager::clearPreviewTextures() {
     previewTexturesMissiles.shrink_to_fit();
 }
 
-sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, ThingCategory category) {
+sf::Texture AssetsManager::getPreviewImage(int thingTypeId, ThingCategory category, int animationFrame, bool allLayers) {
     std::shared_ptr<ThingType> thingType;
     bool isValid = false;
     
@@ -1398,16 +1422,15 @@ sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, 
         return sf::Texture(*BLANK_TEXTURE);
     }
 
-    if (animations <= 0) {
-        animations = 1;
-    }
+    // Clamp animation frame to valid range
+    animationFrame = std::clamp(animationFrame, 1, (int)thingType->animationsFrames);
 
     auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
-    int singleAnimationFrameSize = thingType->height * spriteMaxSize;
-
+    
+    // Simple width * height preview image
     sf::Vector2u size{
-            static_cast<unsigned>(thingType->width * spriteMaxSize),
-            static_cast<unsigned>(singleAnimationFrameSize * animations)
+        static_cast<unsigned>(thingType->width * spriteMaxSize),
+        static_cast<unsigned>(thingType->height * spriteMaxSize)
     };
     
     if (size.x == 0 || size.y == 0 || size.x > 8192 || size.y > 8192) {
@@ -1416,18 +1439,74 @@ sf::Texture AssetsManager::getThingSpriteSheet(int thingTypeId, int animations, 
         return sf::Texture(*BLANK_TEXTURE);
     }
     
+    sf::Image previewImage(size, sf::Color::Transparent);
+
+    // Determine layer range
+    int startLayer = 0;
+    int endLayer = allLayers ? thingType->layers - 1 : 0;
+
+    // Render using first pattern (0, 0, 0)
+    for (int l = startLayer; l <= endLayer; l++) {
+        for (int w = 0; w < thingType->width; w++) {
+            for (int h = 0; h < thingType->height; h++) {
+                auto texture = getTexture(getTextureIdFromThingType(
+                    thingType, w, h, animationFrame, l, 0, 0, 0));
+                
+                if (texture) {
+                    sf::Image tileImage = texture->copyToImage();
+                    // Flipped positioning
+                    unsigned destX = static_cast<unsigned>((thingType->width - w - 1) * spriteMaxSize);
+                    unsigned destY = static_cast<unsigned>((thingType->height - h - 1) * spriteMaxSize);
+                    BlitImage(previewImage, tileImage, destX, destY);
+                }
+            }
+        }
+    }
+
+    sf::Texture previewTexture;
+    if (!previewTexture.loadFromImage(previewImage)) {
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+    return previewTexture;
+}
+
+sf::Texture AssetsManager::getItemSpriteSheet(int itemTypeId, int animations) {
+    if (!Items::isValidItemTypeIndex(itemTypeId)) {
+        Warninger::sendWarning(FUNC_NAME, "Invalid itemType id: " + std::to_string(itemTypeId));
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+    
+    auto itemType = Items::getItemType(itemTypeId);
+    if (!itemType || itemType->width == 0 || itemType->height == 0) {
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+
+    animations = std::clamp(animations, 1, (int)itemType->animationsFrames);
+    
+    auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
+    int frameHeight = itemType->height * spriteMaxSize;
+    
+    // Sprite sheet: width * height, stacked vertically for each animation frame
+    sf::Vector2u size{
+        static_cast<unsigned>(itemType->width * spriteMaxSize),
+        static_cast<unsigned>(frameHeight * animations)
+    };
+    
+    if (size.x == 0 || size.y == 0 || size.x > 8192 || size.y > 8192) {
+        return sf::Texture(*BLANK_TEXTURE);
+    }
+    
     sf::Image sheetImage(size, sf::Color::Transparent);
 
     for (int a = 1; a <= animations; a++) {
-        for (int l = 0; l < thingType->layers; l++) {
-            for (int w = 0; w < thingType->width; w++) {
-                for (int h = 0; h < thingType->height; h++) {
-                    auto texture = getTexture(getTextureIdFromThingType(thingType, w, h, a, l, 0, 0, 0));
+        for (int l = 0; l < itemType->layers; l++) {
+            for (int w = 0; w < itemType->width; w++) {
+                for (int h = 0; h < itemType->height; h++) {
+                    auto texture = getTexture(getTextureIdFromThingType(itemType, w, h, a, l, 0, 0, 0));
                     if (texture) {
                         sf::Image tileImage = texture->copyToImage();
-                        unsigned destX = static_cast<unsigned>((thingType->width - w - 1) * spriteMaxSize);
-                        unsigned destY = static_cast<unsigned>((thingType->height - h - 1) * spriteMaxSize +
-                                                               ((a - 1) * singleAnimationFrameSize));
+                        unsigned destX = static_cast<unsigned>((itemType->width - w - 1) * spriteMaxSize);
+                        unsigned destY = static_cast<unsigned>((itemType->height - h - 1) * spriteMaxSize + ((a - 1) * frameHeight));
                         BlitImage(sheetImage, tileImage, destX, destY);
                     }
                 }
