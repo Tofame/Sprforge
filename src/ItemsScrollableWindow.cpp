@@ -31,6 +31,8 @@ void ItemsScrollableWindow::selectItem(int id, bool goToSelect) {
     assetsManager->setAnimationFrameSetting(1);
     // Stop animation when selecting a different item
     isAnimationPlaying = false;
+    // Reset layer selection when selecting a different item
+    selectedLayer = 0;
     // To know what we selected most recently
     assetsManager->setLastSelectedItemId(id);
 
@@ -442,70 +444,89 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 auto oldPos = ImGui::GetCursorPos();
                 auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
 
-                ImVec2 centeredPos(groupSize.x / 2.0f - ((static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->width)) / 2.0f), oldPos.y);
-                centeredPos.x += spriteMaxSize/4; // Small magic number correction because we couldn't center...
-                ImVec2 gridPos = centeredPos; // assignment here is unimportant, we use trick below to get gridPos...
-                // There were a lot of problems to draw grid on the preview images, so I settled on a trick.
+                // Calculate total preview dimensions including all patterns
+                // Layout: patternZ * patternX columns horizontally, patternY rows vertically
+                // Each cell is (width * spriteMaxSize) x (height * spriteMaxSize)
+                int totalColumnsX = previewIt->patternZ * previewIt->patternX;
+                int totalRowsY = previewIt->patternY;
+                int cellPixelWidth = previewIt->width * spriteMaxSize;
+                int cellPixelHeight = previewIt->height * spriteMaxSize;
+                int totalPreviewWidth = totalColumnsX * cellPixelWidth;
+                int totalPreviewHeight = totalRowsY * cellPixelHeight;
+
+                ImVec2 centeredPos(groupSize.x / 2.0f - (static_cast<float>(totalPreviewWidth) / 2.0f), oldPos.y);
+                ImVec2 gridPos = centeredPos;
 
                 // Clear the preview area first by drawing a background
-                // Calculate preview area size
-                ImVec2 previewAreaSize(spriteMaxSize * previewIt->width, spriteMaxSize * previewIt->height);
+                ImVec2 previewAreaSize(static_cast<float>(totalPreviewWidth), static_cast<float>(totalPreviewHeight));
                 ImVec2 previewAreaMin = centeredPos;
                 ImVec2 previewAreaMax(previewAreaMin.x + previewAreaSize.x, previewAreaMin.y + previewAreaSize.y);
                 
                 // Draw transparent/black background to clear previous sprites
                 ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
 
-                for (int l = 0; l < previewIt->layers; l++) {
-                    for(int w = 0; w < previewIt->width; w++) {
-                        for(int h = 0; h < previewIt->height; h++) {
-                            // For preview, we use the item's actual pattern values (default to 0 if patternX/Y/Z > 1, otherwise use 0)
-                            int patternXIdx = 0; // Default to first pattern
-                            int patternYIdx = 0;
-                            int patternZIdx = 0;
-                            int spriteIndex = assetsManager->getTextureIdFromItemType(previewIt, w, h, assetsManager->getAnimationFrameSetting(), l, patternXIdx, patternYIdx, patternZIdx);
-                            auto texture = assetsManager->getTexture(spriteIndex);
+                // Clamp selected layer to valid bounds
+                int layerIdx = std::clamp(selectedLayer, 0, (int)previewIt->layers - 1);
 
-                            if (texture) {
-                                ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
+                // Loop through all patterns and display them in a grid
+                // Rows: patternY (top to bottom)
+                // Columns: patternZ * patternX (left to right, Z varies slowest, X varies fastest)
+                for (int pY = 0; pY < previewIt->patternY; pY++) {
+                    for (int pZ = 0; pZ < previewIt->patternZ; pZ++) {
+                        for (int pX = 0; pX < previewIt->patternX; pX++) {
+                            // Calculate column index: pZ * patternX + pX
+                            int colIdx = pZ * previewIt->patternX + pX;
+                            
+                            // Draw all sprites (width x height) for this pattern cell using selected layer
+                            for (int w = 0; w < previewIt->width; w++) {
+                                for (int h = 0; h < previewIt->height; h++) {
+                                    int spriteIndex = assetsManager->getTextureIdFromItemType(
+                                        previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
+                                        layerIdx, pX, pY, pZ);
+                                    auto texture = assetsManager->getTexture(spriteIndex);
 
-                                auto tempPos = centeredPos;
-                                // Flipped positioning: (width - w - 1) and (height - h - 1)
-                                // This matches getItemSpriteSheet() which renders correctly in the list
-                                tempPos.x += std::floor((float)(previewIt->width - w - 1) * spriteMaxSize);
-                                tempPos.y += std::floor((float)(previewIt->height - h - 1) * spriteMaxSize);
-                                ImGui::SetCursorPos(tempPos);
+                                    if (texture) {
+                                        ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
 
-                                // Use ImGui::SetCursorPos and draw the image
-                                ImGui::SetCursorPos(tempPos);
-                                ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
+                                        // Calculate position:
+                                        // Base position + column offset + cell-internal offset (flipped)
+                                        auto tempPos = centeredPos;
+                                        tempPos.x += static_cast<float>(colIdx * cellPixelWidth);
+                                        tempPos.y += static_cast<float>(pY * cellPixelHeight);
+                                        // Flipped positioning within the cell
+                                        tempPos.x += std::floor((float)(previewIt->width - w - 1) * spriteMaxSize);
+                                        tempPos.y += std::floor((float)(previewIt->height - h - 1) * spriteMaxSize);
+                                        
+                                        ImGui::SetCursorPos(tempPos);
+                                        ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
 
-                                if (ImGui::IsItemHovered()) {
-                                    ImGui::SetTooltip("Sprite: %d\nPos: w=%d, h=%d, l=%d\nIndex: %d", spriteIndex, w, h, l, 
-                                        assetsManager->getTextureIdFromItemType(previewIt, w, h, assetsManager->getAnimationFrameSetting(), l, 0, 0, 0));
-                                }
+                                        if (ImGui::IsItemHovered()) {
+                                            ImGui::SetTooltip("Sprite: %d\nPos: w=%d, h=%d\nLayer: %d\nPattern: X=%d, Y=%d, Z=%d", 
+                                                spriteIndex, w, h, layerIdx, pX, pY, pZ);
+                                        }
 
-                                // Handle drag-and-drop target
-                                // The drop happens on the sprite at visual position (w, h), so use those coordinates directly
-                                if (ImGui::BeginDragDropTarget()) {
-                                    if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
-                                        int newTextureId = *(int *) payload->Data;
-                                        // Use the loop variables w, h which represent the visual position
-                                        // These should match where the sprite is rendered
-                                        assetsManager->setTextureIdFromItemType(previewIt, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, 0, 0, 0);
-                                        // Force preview update - use the selected button index
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
+                                        // Handle drag-and-drop target
+                                        if (ImGui::BeginDragDropTarget()) {
+                                            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
+                                                int newTextureId = *(int *) payload->Data;
+                                                assetsManager->setTextureIdFromItemType(
+                                                    previewIt, w, h, assetsManager->getAnimationFrameSetting(), 
+                                                    newTextureId, layerIdx, pX, pY, pZ);
+                                                // Force preview update
+                                                assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::ITEM);
+                                            }
+                                            ImGui::EndDragDropTarget();
+                                        }
+
+                                        // Set grid position from the top-left corner (first pattern cell, first sprite)
+                                        if (pX == 0 && pY == 0 && pZ == 0 && 
+                                            w == previewIt->width - 1 && h == previewIt->height - 1) {
+                                            gridPos = ImGui::GetItemRectMin();
+                                        }
+                                    } else {
+                                        Warninger::sendWarning(FUNC_NAME, "No texture detected while displaying item's textures");
                                     }
-                                    ImGui::EndDragDropTarget();
                                 }
-
-                                // Set grid position from the top-left corner of the flipped sprite area
-                                // When w=width-1, h=height-1, we're at the top-left after flipping
-                                if(w == previewIt->width - 1 && h == previewIt->height - 1 && l == 0) {
-                                    gridPos = ImGui::GetItemRectMin();
-                                }
-                            } else {
-                                Warninger::sendWarning(FUNC_NAME, "No texture detected while displaying item's textures");
                             }
                         }
                     }
@@ -547,6 +568,16 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                     ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
                 }
 
+                // Layer slider (only show when item has multiple layers)
+                if (previewIt->layers > 1) {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(width);
+                    ImGui::SliderInt("Layer", &selectedLayer, 0, previewIt->layers - 1, "%d");
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+                    ImGui::Text("(%d/%d)", selectedLayer + 1, previewIt->layers);
+                }
+
                 // Animation loop logic
                 if (isAnimationPlaying && canAnimate) {
                     float elapsed = animationClock.getElapsedTime().asSeconds();
@@ -564,7 +595,7 @@ void ItemsScrollableWindow::drawItemTypePanel() {
                 }
 
                 //ImVec2 gridPos = ImGui::GetItemRectMin(); // ImGui::GetItemRectMin()
-                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->width), static_cast<float>(spriteMaxSize) * static_cast<float>(previewIt->height));
+                ImVec2 gridTotalSize = ImVec2(static_cast<float>(totalPreviewWidth), static_cast<float>(totalPreviewHeight));
                 if (drawGrid) {
                     for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
                         ImGui::GetWindowDrawList()->AddLine(
