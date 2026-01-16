@@ -1,464 +1,479 @@
 #include "OutfitsScrollableWindow.h"
-#include "Misc/definitions.h"
 #include "Misc/Warninger.h"
+#include "Misc/definitions.h"
 #include "Things/ThingCategory.h"
 
 OutfitsScrollableWindow::OutfitsScrollableWindow(AssetsManager* am)
-: ThingScrollableWindow(am, ThingCategory::OUTFIT)
-{
-}
+	: ThingScrollableWindow(am, ThingCategory::OUTFIT) {}
 
 void OutfitsScrollableWindow::selectOutfit(int id, bool goToSelect) {
-    if(getSelectedButtonIndex() >= 0 && id == getSelectedButtonIndex()) {
-        return;
-    }
-    if(!Outfits::isValidOutfitTypeIndex(id)) {
-        Warninger::sendWarning(FUNC_NAME, "OutfitType that we try to select doesn't exist (" + std::to_string(id) + ")");
-        return;
-    }
+	if (getSelectedButtonIndex() >= 0 && id == getSelectedButtonIndex()) {
+		return;
+	}
+	if (!Outfits::isValidOutfitTypeIndex(id)) {
+		Warninger::sendWarning(FUNC_NAME,
+							   "OutfitType that we try to select doesn't exist (" + std::to_string(id) + ")");
+		return;
+	}
 
-    assetsManager->setAnimationFrameSetting(1);
-    // Stop animation when selecting a different outfit
-    isAnimationPlaying = false;
-    // Reset direction to North when selecting different outfit
-    selectedDirection = 0;
-    if(goToSelect) {
-        scrollToButtonIndex = id;
-    }
-    selectedOutfitIndex = id;
-    
-    // Load unsaved copy
-    if (id >= 0 && id < (int)Outfits::getOutfitTypesCount()) {
-        unsavedOutfitType = std::make_shared<OutfitType>(*Outfits::getOutfitType(id));
-        unsavedOutfitTypeId = id;
-    }
+	assetsManager->setAnimationFrameSetting(1);
+	// Stop animation when selecting a different outfit
+	isAnimationPlaying = false;
+	// Reset direction to North when selecting different outfit
+	selectedDirection = 0;
+	if (goToSelect) {
+		scrollToButtonIndex = id;
+	}
+	selectedOutfitIndex = id;
+
+	// Load unsaved copy
+	if (id >= 0 && id < (int)Outfits::getOutfitTypesCount()) {
+		unsavedOutfitType = std::make_shared<OutfitType>(*Outfits::getOutfitType(id));
+		unsavedOutfitTypeId = id;
+	}
 }
 
 int OutfitsScrollableWindow::addOutfitType() {
-    auto newOutfitType = std::make_shared<OutfitType>();
-    Outfits::pushOutfitType(newOutfitType);
-    return getTotalButtons();
+	auto newOutfitType = std::make_shared<OutfitType>();
+	Outfits::pushOutfitType(newOutfitType);
+	return getTotalButtons();
 }
 
 bool OutfitsScrollableWindow::removeOutfitType() {
-    int selectedIndex = getSelectedButtonIndex();
-    if(selectedIndex < 0 || selectedIndex >= getTotalButtons()) {
-        return false;
-    }
-    Outfits::removeOutfitType(selectedIndex);
-    if(selectedIndex >= getTotalButtons()) {
-        selectedOutfitIndex = getTotalButtons() - 1;
-    }
-    return true;
+	int selectedIndex = getSelectedButtonIndex();
+	if (selectedIndex < 0 || selectedIndex >= getTotalButtons()) {
+		return false;
+	}
+	Outfits::removeOutfitType(selectedIndex);
+	if (selectedIndex >= getTotalButtons()) {
+		selectedOutfitIndex = getTotalButtons() - 1;
+	}
+	return true;
 }
 
 void OutfitsScrollableWindow::drawOutfitTypeList(sf::Clock& deltaClock) {
-    ImGui::BeginGroup();
-    ImGui::Text("Outfits list (Max outfitType: %d)", (Outfits::getOutfitTypesCount() > 0 ? (Outfits::getOutfitTypesCount() - 1) : 0));
+	ImGui::BeginGroup();
+	ImGui::Text("Outfits list (Max outfitType: %d)",
+				(Outfits::getOutfitTypesCount() > 0 ? (Outfits::getOutfitTypesCount() - 1) : 0));
 
-    // Use available space instead of fixed size
-    float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
-    ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
-    ImGui::BeginChild("OutfitsList", listSize, true);
-    if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
-        ImGui::Text("Need to load .dat and .spr!");
-        ImGui::EndChild();
-        ImGui::EndGroup();
-        return;
-    }
+	// Use available space instead of fixed size
+	float availableHeight = ImGui::GetContentRegionAvail().y - 60.0f; // Reserve space for controls
+	ImVec2 listSize(0, availableHeight > 0 ? availableHeight : 500);
+	ImGui::BeginChild("OutfitsList", listSize, true);
+	if (!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
+		ImGui::Text("Need to load .dat and .spr!");
+		ImGui::EndChild();
+		ImGui::EndGroup();
+		return;
+	}
 
-    // Show message if no outfits loaded
-    if (Outfits::getOutfitTypesCount() == 0) {
-        ImGui::Text("No outfits loaded. Load a .dat file to see outfits.");
-        ImGui::EndChild();
-        ImGui::EndGroup();
-        return;
-    }
+	// Show message if no outfits loaded
+	if (Outfits::getOutfitTypesCount() == 0) {
+		ImGui::Text("No outfits loaded. Load a .dat file to see outfits.");
+		ImGui::EndChild();
+		ImGui::EndGroup();
+		return;
+	}
 
-    int startIndex = getPageFirstIndex();
-    int endIndex = getPageLastIndex();
-    
-    // Create preview textures for current page if needed
-    static int lastOutfitPage = -1;
-    if (getCurrentPage() != lastOutfitPage) {
-        assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::OUTFIT);
-        lastOutfitPage = getCurrentPage();
-    }
+	int startIndex = getPageFirstIndex();
+	int endIndex = getPageLastIndex();
 
-    for (int i = startIndex; i < endIndex && i < (int)Outfits::getOutfitTypesCount(); ++i) {
-        bool isSelected = (i == getSelectedButtonIndex());
-        auto texture = assetsManager->getPreviewTexture(i, ThingCategory::OUTFIT);
+	// Create preview textures for current page if needed
+	static int lastOutfitPage = -1;
+	if (getCurrentPage() != lastOutfitPage) {
+		assetsManager->createPreviewTexturesForPage(startIndex, endIndex - 1, ThingCategory::OUTFIT);
+		lastOutfitPage = getCurrentPage();
+	}
 
-        ImGui::PushID(i);
-        if (ImGui::ImageButton("##OutfitTypeButton", (ImTextureID)(uintptr_t)texture->getNativeHandle(),
-            ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
-            selectOutfit(i, false);
-        }
-        ImGui::PopID();
+	for (int i = startIndex; i < endIndex && i < (int)Outfits::getOutfitTypesCount(); ++i) {
+		bool isSelected = (i == getSelectedButtonIndex());
+		auto texture = assetsManager->getPreviewTexture(i, ThingCategory::OUTFIT);
 
-        if (isSelected) {
-            ImVec2 buttonPos = ImGui::GetItemRectMin();
-            ImVec2 buttonSize = ImGui::GetItemRectSize();
-            ImU32 borderColor = ConfigManager::getInstance()->getImGuiSelectedThingColor();
-            ImGui::GetWindowDrawList()->AddRect(buttonPos, ImVec2(buttonPos.x + buttonSize.x, buttonPos.y + buttonSize.y),
-                borderColor, 0.0f, ImDrawFlags_None, 3.0f);
-        }
+		ImGui::PushID(i);
+		if (ImGui::ImageButton("##OutfitTypeButton", (ImTextureID)(uintptr_t)texture->getNativeHandle(),
+							   ConfigManager::getInstance()->getItemButtonSize(), ImVec2(0, 0), ImVec2(1, 1))) {
+			selectOutfit(i, false);
+		}
+		ImGui::PopID();
 
-        if(isSelected && scrollToButtonIndex == i) {
-            ImGui::SetScrollHereY();
-            scrollToButtonIndex = -1;
-        }
+		if (isSelected) {
+			ImVec2 buttonPos = ImGui::GetItemRectMin();
+			ImVec2 buttonSize = ImGui::GetItemRectSize();
+			ImU32 borderColor = ConfigManager::getInstance()->getImGuiSelectedThingColor();
+			ImGui::GetWindowDrawList()->AddRect(buttonPos,
+												ImVec2(buttonPos.x + buttonSize.x, buttonPos.y + buttonSize.y),
+												borderColor, 0.0f, ImDrawFlags_None, 3.0f);
+		}
 
-        ImGui::SameLine();
-        ImGui::Text("ID: %d", i);
-    }
+		if (isSelected && scrollToButtonIndex == i) {
+			ImGui::SetScrollHereY();
+			scrollToButtonIndex = -1;
+		}
 
-    ImGui::EndChild();
-    ImGui::EndGroup();
+		ImGui::SameLine();
+		ImGui::Text("ID: %d", i);
+	}
+
+	ImGui::EndChild();
+	ImGui::EndGroup();
 }
 
 void OutfitsScrollableWindow::drawOutfitTypePanel() {
-    ImGui::BeginGroup();
-    ImVec2 propertiesGroupSize = ImGui::GetItemRectSize();
-    ImGui::Text("Properties List");
-    // Use available space instead of fixed size
-    float availableHeight = ImGui::GetContentRegionAvail().y;
-    ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
-    ImGui::BeginChild("PropertiesPanel", panelSize, true);
-    
-    if(!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
-        ImGui::Text("Need to load .dat and .spr!");
-        ImGui::EndChild();
-        ImGui::EndGroup();
-        return;
-    }
+	ImGui::BeginGroup();
+	ImVec2 propertiesGroupSize = ImGui::GetItemRectSize();
+	ImGui::Text("Properties List");
+	// Use available space instead of fixed size
+	float availableHeight = ImGui::GetContentRegionAvail().y;
+	ImVec2 panelSize(0, availableHeight > 0 ? availableHeight : 500);
+	ImGui::BeginChild("PropertiesPanel", panelSize, true);
 
-    if (getSelectedButtonIndex() >= 0 && getSelectedButtonIndex() < (int)Outfits::getOutfitTypesCount()) {
-        if (!unsavedOutfitType || unsavedOutfitTypeId != getSelectedButtonIndex()) {
-            unsavedOutfitType = std::make_shared<OutfitType>(*Outfits::getOutfitType(getSelectedButtonIndex()));
-            unsavedOutfitTypeId = getSelectedButtonIndex();
-        }
+	if (!assetsManager->isGraphicFileLoaded() || !assetsManager->isDatFileLoaded()) {
+		ImGui::Text("Need to load .dat and .spr!");
+		ImGui::EndChild();
+		ImGui::EndGroup();
+		return;
+	}
 
-        if (ImGui::BeginTabBar("Tabs")) {
-            if (ImGui::BeginTabItem("Texture")) {
-                ImGui::BeginGroup();
-                ImVec2 groupSize = ImGui::GetContentRegionAvail();
-                ImGui::Text("Texture Preview (Drop sprites here)");
-                auto oldPos = ImGui::GetCursorPos();
-                auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
+	if (getSelectedButtonIndex() >= 0 && getSelectedButtonIndex() < (int)Outfits::getOutfitTypesCount()) {
+		if (!unsavedOutfitType || unsavedOutfitTypeId != getSelectedButtonIndex()) {
+			unsavedOutfitType = std::make_shared<OutfitType>(*Outfits::getOutfitType(getSelectedButtonIndex()));
+			unsavedOutfitTypeId = getSelectedButtonIndex();
+		}
 
-                ImVec2 centeredPos(groupSize.x / 2.0f - ((static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width)) / 2.0f), oldPos.y);
-                centeredPos.x += spriteMaxSize/4;
-                ImVec2 gridPos = centeredPos;
+		if (ImGui::BeginTabBar("Tabs")) {
+			if (ImGui::BeginTabItem("Texture")) {
+				ImGui::BeginGroup();
+				ImVec2 groupSize = ImGui::GetContentRegionAvail();
+				ImGui::Text("Texture Preview (Drop sprites here)");
+				auto oldPos = ImGui::GetCursorPos();
+				auto spriteMaxSize = ConfigManager::getInstance()->getSpriteMaxSize();
 
-                ImVec2 previewAreaSize(spriteMaxSize * unsavedOutfitType->width, spriteMaxSize * unsavedOutfitType->height);
-                ImVec2 previewAreaMin = centeredPos;
-                ImVec2 previewAreaMax(previewAreaMin.x + previewAreaSize.x, previewAreaMin.y + previewAreaSize.y);
-                ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
+				ImVec2 centeredPos(
+					groupSize.x / 2.0f -
+						((static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width)) / 2.0f),
+					oldPos.y);
+				centeredPos.x += spriteMaxSize / 4;
+				ImVec2 gridPos = centeredPos;
 
-                for (int l = 0; l < unsavedOutfitType->layers; l++) {
-                    for(int w = 0; w < unsavedOutfitType->width; w++) {
-                        for(int h = 0; h < unsavedOutfitType->height; h++) {
-                            // Use selected direction as patternXIdx (0=North, 1=East, 2=South, 3=West)
-                            // Clamp to valid range based on patternX
-                            int patternXIdx = selectedDirection;
-                            if (patternXIdx >= unsavedOutfitType->patternX) {
-                                patternXIdx = 0;
-                            }
-                            int patternYIdx = 0;
-                            int patternZIdx = 0;
-                            int spriteIndex = assetsManager->getTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), l, patternXIdx, patternYIdx, patternZIdx);
-                            auto texture = assetsManager->getTexture(spriteIndex);
+				ImVec2 previewAreaSize(spriteMaxSize * unsavedOutfitType->width,
+									   spriteMaxSize * unsavedOutfitType->height);
+				ImVec2 previewAreaMin = centeredPos;
+				ImVec2 previewAreaMax(previewAreaMin.x + previewAreaSize.x, previewAreaMin.y + previewAreaSize.y);
+				ImGui::GetWindowDrawList()->AddRectFilled(previewAreaMin, previewAreaMax, IM_COL32(0, 0, 0, 0));
 
-                            if (texture) {
-                                ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
-                                auto tempPos = centeredPos;
-                                tempPos.x += std::floor((float)(unsavedOutfitType->width - w - 1) * spriteMaxSize);
-                                tempPos.y += std::floor((float)(unsavedOutfitType->height - h - 1) * spriteMaxSize);
-                                ImGui::SetCursorPos(tempPos);
-                                ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
-                                
-                                // Debug tooltip to show sprite info
-                                if (ImGui::IsItemHovered()) {
-                                    ImGui::SetTooltip("Sprite: %d\nDirection: %d (patternX=%d)\nPos: w=%d, h=%d, l=%d", 
-                                        spriteIndex, selectedDirection, patternXIdx, w, h, l);
-                                }
+				for (int l = 0; l < unsavedOutfitType->layers; l++) {
+					for (int w = 0; w < unsavedOutfitType->width; w++) {
+						for (int h = 0; h < unsavedOutfitType->height; h++) {
+							// Use selected direction as patternXIdx (0=North, 1=East, 2=South, 3=West)
+							// Clamp to valid range based on patternX
+							int patternXIdx = selectedDirection;
+							if (patternXIdx >= unsavedOutfitType->patternX) {
+								patternXIdx = 0;
+							}
+							int patternYIdx = 0;
+							int patternZIdx = 0;
+							int spriteIndex = assetsManager->getTextureIdFromThingType(
+								unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), l, patternXIdx,
+								patternYIdx, patternZIdx);
+							auto texture = assetsManager->getTexture(spriteIndex);
 
-                                if (ImGui::BeginDragDropTarget()) {
-                                    if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
-                                        int newTextureId = *(int *) payload->Data;
-                                        // Use selected direction when dropping sprites
-                                        assetsManager->setTextureIdFromThingType(unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(), newTextureId, l, selectedDirection, 0, 0);
-                                        assetsManager->createPreviewTexture(getSelectedButtonIndex(), ThingCategory::OUTFIT);
-                                    }
-                                    ImGui::EndDragDropTarget();
-                                }
+							if (texture) {
+								ImVec2 previewSize = ImVec2((float)texture->getSize().x, (float)texture->getSize().y);
+								auto tempPos = centeredPos;
+								tempPos.x += std::floor((float)(unsavedOutfitType->width - w - 1) * spriteMaxSize);
+								tempPos.y += std::floor((float)(unsavedOutfitType->height - h - 1) * spriteMaxSize);
+								ImGui::SetCursorPos(tempPos);
+								ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), previewSize);
 
-                                if(w == unsavedOutfitType->width - 1 && h == unsavedOutfitType->height - 1 && l == 0) {
-                                    gridPos = ImGui::GetItemRectMin();
-                                }
-                            }
-                        }
-                    }
-                }
+								// Debug tooltip to show sprite info
+								if (ImGui::IsItemHovered()) {
+									ImGui::SetTooltip("Sprite: %d\nDirection: %d (patternX=%d)\nPos: w=%d, h=%d, l=%d",
+													  spriteIndex, selectedDirection, patternXIdx, w, h, l);
+								}
 
-                float currentY = ImGui::GetCursorPosY();
-                ImGui::SetCursorPosY(currentY + 30);
-                ImGui::Checkbox("Draw Grid", &drawGrid);
-                ImGui::SameLine();
-                float width = ImGui::GetContentRegionAvail().x * 0.15f;
-                ImGui::PushItemWidth(width);
-                int previousFrame = assetsManager->getAnimationFrameSetting();
-                ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1, unsavedOutfitType->animationsFrames);
-                // Stop animation if user manually changes the slider
-                if (assetsManager->getAnimationFrameSetting() != previousFrame) {
-                    isAnimationPlaying = false;
-                }
-                ImGui::PopItemWidth();
+								if (ImGui::BeginDragDropTarget()) {
+									if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_ID")) {
+										int newTextureId = *(int*)payload->Data;
+										// Use selected direction when dropping sprites
+										assetsManager->setTextureIdFromThingType(
+											unsavedOutfitType, w, h, assetsManager->getAnimationFrameSetting(),
+											newTextureId, l, selectedDirection, 0, 0);
+										assetsManager->createPreviewTexture(getSelectedButtonIndex(),
+																			ThingCategory::OUTFIT);
+									}
+									ImGui::EndDragDropTarget();
+								}
 
-                // Play/Pause Animation Button
-                ImGui::SameLine();
-                const char* playButtonLabel = isAnimationPlaying ? "||##PauseAnimation" : ">##PlayAnimation";
-                bool canAnimate = unsavedOutfitType->animationsFrames > 1;
-                if (!canAnimate) {
-                    isAnimationPlaying = false; // Stop if outfit has only 1 frame
-                }
-                if (ImGui::Button(playButtonLabel, ImVec2(30, 0))) {
-                    if (canAnimate) {
-                        isAnimationPlaying = !isAnimationPlaying;
-                        if (isAnimationPlaying) {
-                            animationClock.restart();
-                        }
-                    }
-                }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
-                }
+								if (w == unsavedOutfitType->width - 1 && h == unsavedOutfitType->height - 1 && l == 0) {
+									gridPos = ImGui::GetItemRectMin();
+								}
+							}
+						}
+					}
+				}
 
-                // Animation loop logic
-                if (isAnimationPlaying && canAnimate) {
-                    float elapsed = animationClock.getElapsedTime().asSeconds();
-                    if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
-                        // Advance to next frame
-                        int currentFrame = assetsManager->getAnimationFrameSetting();
-                        int nextFrame = currentFrame + 1;
-                        // Loop using modulo: frame 1 to animationsFrames, then back to 1
-                        if (nextFrame > unsavedOutfitType->animationsFrames) {
-                            nextFrame = 1;
-                        }
-                        assetsManager->setAnimationFrameSetting(nextFrame);
-                        animationClock.restart();
-                    }
-                }
+				float currentY = ImGui::GetCursorPosY();
+				ImGui::SetCursorPosY(currentY + 30);
+				ImGui::Checkbox("Draw Grid", &drawGrid);
+				ImGui::SameLine();
+				float width = ImGui::GetContentRegionAvail().x * 0.15f;
+				ImGui::PushItemWidth(width);
+				int previousFrame = assetsManager->getAnimationFrameSetting();
+				ImGui::SliderInt("Animation Frame", &assetsManager->getAnimationFrameSettingRef(), 1,
+								 unsavedOutfitType->animationsFrames);
+				// Stop animation if user manually changes the slider
+				if (assetsManager->getAnimationFrameSetting() != previousFrame) {
+					isAnimationPlaying = false;
+				}
+				ImGui::PopItemWidth();
 
-                // Direction buttons (only show if patternX > 1)
-                // Clamp selected direction to valid range
-                if (selectedDirection >= unsavedOutfitType->patternX) {
-                    selectedDirection = 0;
-                }
-                
-                if (unsavedOutfitType->patternX > 1) {
-                    ImGui::Spacing();
-                    ImGui::Separator();
-                    ImGui::Spacing();
-                    ImGui::Text("Direction:");
-                    ImGui::SameLine();
-                    
-                    // North (Up) button - always available if patternX > 1
-                    bool northSelected = (selectedDirection == 0);
-                    if (northSelected) {
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                    }
-                    if (ImGui::Button("^##NorthDirection", ImVec2(30, 30))) {
-                        selectedDirection = 0;
-                    }
-                    if (northSelected) {
-                        ImGui::PopStyleColor();
-                    }
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("North (Up)");
-                    }
-                    
-                    // East (Right) button - only if patternX >= 2
-                    if (unsavedOutfitType->patternX >= 2) {
-                        ImGui::SameLine();
-                        bool eastSelected = (selectedDirection == 1);
-                        if (eastSelected) {
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                        }
-                        if (ImGui::Button(">##EastDirection", ImVec2(30, 30))) {
-                            selectedDirection = 1;
-                        }
-                        if (eastSelected) {
-                            ImGui::PopStyleColor();
-                        }
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("East (Right)");
-                        }
-                    }
-                    
-                    // South (Down) button - only if patternX >= 3
-                    if (unsavedOutfitType->patternX >= 3) {
-                        ImGui::SameLine();
-                        bool southSelected = (selectedDirection == 2);
-                        if (southSelected) {
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                        }
-                        if (ImGui::Button("v##SouthDirection", ImVec2(30, 30))) {
-                            selectedDirection = 2;
-                        }
-                        if (southSelected) {
-                            ImGui::PopStyleColor();
-                        }
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("South (Down)");
-                        }
-                    }
-                    
-                    // West (Left) button - only if patternX >= 4
-                    if (unsavedOutfitType->patternX >= 4) {
-                        ImGui::SameLine();
-                        bool westSelected = (selectedDirection == 3);
-                        if (westSelected) {
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                        }
-                        if (ImGui::Button("<##WestDirection", ImVec2(30, 30))) {
-                            selectedDirection = 3;
-                        }
-                        if (westSelected) {
-                            ImGui::PopStyleColor();
-                        }
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("West (Left)");
-                        }
-                    }
-                }
+				// Play/Pause Animation Button
+				ImGui::SameLine();
+				const char* playButtonLabel = isAnimationPlaying ? "||##PauseAnimation" : ">##PlayAnimation";
+				bool canAnimate = unsavedOutfitType->animationsFrames > 1;
+				if (!canAnimate) {
+					isAnimationPlaying = false; // Stop if outfit has only 1 frame
+				}
+				if (ImGui::Button(playButtonLabel, ImVec2(30, 0))) {
+					if (canAnimate) {
+						isAnimationPlaying = !isAnimationPlaying;
+						if (isAnimationPlaying) {
+							animationClock.restart();
+						}
+					}
+				}
+				if (ImGui::IsItemHovered()) {
+					ImGui::SetTooltip(isAnimationPlaying ? "Pause Animation" : "Play Animation");
+				}
 
-                ImVec2 gridTotalSize = ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width), static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->height));
-                if (drawGrid) {
-                    for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
-                        ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x + x, gridPos.y), ImVec2(gridPos.x + x, gridPos.y + gridTotalSize.y),
-                            ConfigManager::getInstance()->getImGuiGridColor(), 1.0f);
-                    }
-                    for (int y = 0; y <= gridTotalSize.y; y += spriteMaxSize) {
-                        ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x, gridPos.y + y), ImVec2(gridPos.x + gridTotalSize.x, gridPos.y + y),
-                            ConfigManager::getInstance()->getImGuiGridColor(), 1.0f);
-                    }
-                }
+				// Animation loop logic
+				if (isAnimationPlaying && canAnimate) {
+					float elapsed = animationClock.getElapsedTime().asSeconds();
+					if (elapsed >= ConfigManager::getInstance()->getAnimationFrameTime()) {
+						// Advance to next frame
+						int currentFrame = assetsManager->getAnimationFrameSetting();
+						int nextFrame = currentFrame + 1;
+						// Loop using modulo: frame 1 to animationsFrames, then back to 1
+						if (nextFrame > unsavedOutfitType->animationsFrames) {
+							nextFrame = 1;
+						}
+						assetsManager->setAnimationFrameSetting(nextFrame);
+						animationClock.restart();
+					}
+				}
 
-                ImGui::NewLine();
-                ImGui::Separator();
-                ImGui::SetCursorPosY(oldPos.y + groupSize.y/2 + 10);
+				// Direction buttons (only show if patternX > 1)
+				// Clamp selected direction to valid range
+				if (selectedDirection >= unsavedOutfitType->patternX) {
+					selectedDirection = 0;
+				}
 
-                if (ImGui::BeginTable("OutfitTextureProperties", 3, ImGuiTableFlags_SizingFixedFit)) {
-                    // Set up columns
-                    ImGui::TableSetupColumn("Column 1", ImGuiTableColumnFlags_WidthFixed, (groupSize.x/2));
-                    ImGui::TableSetupColumn("Column 2", ImGuiTableColumnFlags_WidthFixed, (groupSize.x/4));
-                    ImGui::TableSetupColumn("Column 3", ImGuiTableColumnFlags_WidthFixed, groupSize.x/4);
-                    ImGui::TableNextColumn();
+				if (unsavedOutfitType->patternX > 1) {
+					ImGui::Spacing();
+					ImGui::Separator();
+					ImGui::Spacing();
+					ImGui::Text("Direction:");
+					ImGui::SameLine();
 
-                    ImGui::TableNextColumn();
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Width:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Height:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Layers:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Pattern X:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Pattern Y:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Pattern Z:");
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Animations:");
+					// North (Up) button - always available if patternX > 1
+					bool northSelected = (selectedDirection == 0);
+					if (northSelected) {
+						ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+					}
+					if (ImGui::Button("^##NorthDirection", ImVec2(30, 30))) {
+						selectedDirection = 0;
+					}
+					if (northSelected) {
+						ImGui::PopStyleColor();
+					}
+					if (ImGui::IsItemHovered()) {
+						ImGui::SetTooltip("North (Up)");
+					}
 
-                    ImGui::TableNextColumn();
-                    ImGui::PushItemWidth(groupSize.x * 0.20f);
+					// East (Right) button - only if patternX >= 2
+					if (unsavedOutfitType->patternX >= 2) {
+						ImGui::SameLine();
+						bool eastSelected = (selectedDirection == 1);
+						if (eastSelected) {
+							ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+						}
+						if (ImGui::Button(">##EastDirection", ImVec2(30, 30))) {
+							selectedDirection = 1;
+						}
+						if (eastSelected) {
+							ImGui::PopStyleColor();
+						}
+						if (ImGui::IsItemHovered()) {
+							ImGui::SetTooltip("East (Right)");
+						}
+					}
 
-                    int width = unsavedOutfitType->width;
-                    if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        width = std::clamp(width, 1, ConfigManager::getInstance()->getItemMaxWidth());
-                        unsavedOutfitType->setWidth(width);
-                    }
+					// South (Down) button - only if patternX >= 3
+					if (unsavedOutfitType->patternX >= 3) {
+						ImGui::SameLine();
+						bool southSelected = (selectedDirection == 2);
+						if (southSelected) {
+							ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+						}
+						if (ImGui::Button("v##SouthDirection", ImVec2(30, 30))) {
+							selectedDirection = 2;
+						}
+						if (southSelected) {
+							ImGui::PopStyleColor();
+						}
+						if (ImGui::IsItemHovered()) {
+							ImGui::SetTooltip("South (Down)");
+						}
+					}
 
-                    int height = unsavedOutfitType->height;
-                    if (ImGui::InputInt("##Height", &height, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        height = std::clamp(height, 1, ConfigManager::getInstance()->getItemMaxHeight());
-                        unsavedOutfitType->setHeight(height);
-                    }
+					// West (Left) button - only if patternX >= 4
+					if (unsavedOutfitType->patternX >= 4) {
+						ImGui::SameLine();
+						bool westSelected = (selectedDirection == 3);
+						if (westSelected) {
+							ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+						}
+						if (ImGui::Button("<##WestDirection", ImVec2(30, 30))) {
+							selectedDirection = 3;
+						}
+						if (westSelected) {
+							ImGui::PopStyleColor();
+						}
+						if (ImGui::IsItemHovered()) {
+							ImGui::SetTooltip("West (Left)");
+						}
+					}
+				}
 
-                    int layers = unsavedOutfitType->layers;
-                    if (ImGui::InputInt("##Layers", &layers, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        layers = std::clamp(layers, 1, 10);
-                        unsavedOutfitType->setLayers(layers);
-                    }
+				ImVec2 gridTotalSize =
+					ImVec2(static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->width),
+						   static_cast<float>(spriteMaxSize) * static_cast<float>(unsavedOutfitType->height));
+				if (drawGrid) {
+					for (int x = 0; x <= gridTotalSize.x; x += spriteMaxSize) {
+						ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x + x, gridPos.y),
+															ImVec2(gridPos.x + x, gridPos.y + gridTotalSize.y),
+															ConfigManager::getInstance()->getImGuiGridColor(), 1.0f);
+					}
+					for (int y = 0; y <= gridTotalSize.y; y += spriteMaxSize) {
+						ImGui::GetWindowDrawList()->AddLine(ImVec2(gridPos.x, gridPos.y + y),
+															ImVec2(gridPos.x + gridTotalSize.x, gridPos.y + y),
+															ConfigManager::getInstance()->getImGuiGridColor(), 1.0f);
+					}
+				}
 
-                    int patternX = unsavedOutfitType->patternX;
-                    if (ImGui::InputInt("##PatternX", &patternX, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        patternX = std::clamp(patternX, 1, 10);
-                        unsavedOutfitType->setPatternX(patternX);
-                    }
+				ImGui::NewLine();
+				ImGui::Separator();
+				ImGui::SetCursorPosY(oldPos.y + groupSize.y / 2 + 10);
 
-                    int patternY = unsavedOutfitType->patternY;
-                    if (ImGui::InputInt("##PatternY", &patternY, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        patternY = std::clamp(patternY, 1, 10);
-                        unsavedOutfitType->setPatternY(patternY);
-                    }
+				if (ImGui::BeginTable("OutfitTextureProperties", 3, ImGuiTableFlags_SizingFixedFit)) {
+					// Set up columns
+					ImGui::TableSetupColumn("Column 1", ImGuiTableColumnFlags_WidthFixed, (groupSize.x / 2));
+					ImGui::TableSetupColumn("Column 2", ImGuiTableColumnFlags_WidthFixed, (groupSize.x / 4));
+					ImGui::TableSetupColumn("Column 3", ImGuiTableColumnFlags_WidthFixed, groupSize.x / 4);
+					ImGui::TableNextColumn();
 
-                    int patternZ = unsavedOutfitType->patternZ;
-                    if (ImGui::InputInt("##PatternZ", &patternZ, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        patternZ = std::clamp(patternZ, 1, 10);
-                        unsavedOutfitType->setPatternZ(patternZ);
-                    }
+					ImGui::TableNextColumn();
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Width:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Height:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Layers:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Pattern X:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Pattern Y:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Pattern Z:");
+					ImGui::AlignTextToFramePadding();
+					ImGui::Text("Animations:");
 
-                    int animations = unsavedOutfitType->animationsFrames;
-                    if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
-                        animations = std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
-                        unsavedOutfitType->setAnimationCount(animations);
-                        if(animations < assetsManager->getAnimationFrameSetting()) {
-                            assetsManager->setAnimationFrameSetting(animations);
-                        }
-                    }
-                    ImGui::PopItemWidth();
-                    ImGui::EndTable();
-                }
-                ImGui::EndGroup();
-            } else {
-                // Stop animation if no outfit is selected
-                isAnimationPlaying = false;
-            }
-            ImGui::EndTabItem();
-        } else {
-            // Stop animation when not on texture tab
-            isAnimationPlaying = false;
-        }
-        ImGui::EndTabBar();
+					ImGui::TableNextColumn();
+					ImGui::PushItemWidth(groupSize.x * 0.20f);
 
-        // Save Outfit Button - positioned at bottom center
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-        
-        // Center the save button
-        float buttonWidth = 120.0f;
-        float availableWidth = ImGui::GetContentRegionAvail().x;
-        float offset = (availableWidth - buttonWidth) * 0.5f;
-        if (offset > 0)
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
-        
-        if (ImGui::Button("Save Outfit", ImVec2(buttonWidth, 0))) {
-            if (unsavedOutfitType && unsavedOutfitTypeId >= 0) {
-                Outfits::replaceOutfitType(unsavedOutfitTypeId, std::make_shared<OutfitType>(*unsavedOutfitType));
-                assetsManager->createPreviewTexture(unsavedOutfitTypeId, ThingCategory::OUTFIT);
-                assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
-            }
-        }
-    }
+					int width = unsavedOutfitType->width;
+					if (ImGui::InputInt("##Width", &width, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						width = std::clamp(width, 1, ConfigManager::getInstance()->getItemMaxWidth());
+						unsavedOutfitType->setWidth(width);
+					}
 
-    ImGui::EndChild();
-    ImGui::EndGroup();
+					int height = unsavedOutfitType->height;
+					if (ImGui::InputInt("##Height", &height, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						height = std::clamp(height, 1, ConfigManager::getInstance()->getItemMaxHeight());
+						unsavedOutfitType->setHeight(height);
+					}
+
+					int layers = unsavedOutfitType->layers;
+					if (ImGui::InputInt("##Layers", &layers, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						layers = std::clamp(layers, 1, 10);
+						unsavedOutfitType->setLayers(layers);
+					}
+
+					int patternX = unsavedOutfitType->patternX;
+					if (ImGui::InputInt("##PatternX", &patternX, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						patternX = std::clamp(patternX, 1, 10);
+						unsavedOutfitType->setPatternX(patternX);
+					}
+
+					int patternY = unsavedOutfitType->patternY;
+					if (ImGui::InputInt("##PatternY", &patternY, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						patternY = std::clamp(patternY, 1, 10);
+						unsavedOutfitType->setPatternY(patternY);
+					}
+
+					int patternZ = unsavedOutfitType->patternZ;
+					if (ImGui::InputInt("##PatternZ", &patternZ, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						patternZ = std::clamp(patternZ, 1, 10);
+						unsavedOutfitType->setPatternZ(patternZ);
+					}
+
+					int animations = unsavedOutfitType->animationsFrames;
+					if (ImGui::InputInt("##Animations", &animations, 1, 1, ImGuiInputTextFlags_CharsDecimal)) {
+						animations =
+							std::clamp(animations, 1, ConfigManager::getInstance()->getItemMaxAnimationCount());
+						unsavedOutfitType->setAnimationCount(animations);
+						if (animations < assetsManager->getAnimationFrameSetting()) {
+							assetsManager->setAnimationFrameSetting(animations);
+						}
+					}
+					ImGui::PopItemWidth();
+					ImGui::EndTable();
+				}
+				ImGui::EndGroup();
+			} else {
+				// Stop animation if no outfit is selected
+				isAnimationPlaying = false;
+			}
+			ImGui::EndTabItem();
+		} else {
+			// Stop animation when not on texture tab
+			isAnimationPlaying = false;
+		}
+		ImGui::EndTabBar();
+
+		// Save Outfit Button - positioned at bottom center
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		// Center the save button
+		float buttonWidth = 120.0f;
+		float availableWidth = ImGui::GetContentRegionAvail().x;
+		float offset = (availableWidth - buttonWidth) * 0.5f;
+		if (offset > 0)
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
+
+		if (ImGui::Button("Save Outfit", ImVec2(buttonWidth, 0))) {
+			if (unsavedOutfitType && unsavedOutfitTypeId >= 0) {
+				Outfits::replaceOutfitType(unsavedOutfitTypeId, std::make_shared<OutfitType>(*unsavedOutfitType));
+				assetsManager->createPreviewTexture(unsavedOutfitTypeId, ThingCategory::OUTFIT);
+				assetsManager->setUnsavedChanges(CATEGORY_ITEMS, true);
+			}
+		}
+	}
+
+	ImGui::EndChild();
+	ImGui::EndGroup();
 }
 
 // drawPaginationControls is now inherited from ThingScrollableWindow base class
-

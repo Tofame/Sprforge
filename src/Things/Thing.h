@@ -7,12 +7,11 @@ class Item;
 
 class Thing {
 protected:
-    Thing() = default;
+	Thing() = default;
 
 public:
-    virtual Item* getItem() {return nullptr;}
+	virtual Item* getItem() { return nullptr; }
 };
 
 
-
-#endif //THING_H
+#endif // THING_H

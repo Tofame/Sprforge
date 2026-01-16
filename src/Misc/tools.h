@@ -1,699 +1,706 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <chrono>
-#include "imgui.h"
-#include "nfd.h"
-#include <algorithm>
 #include "../Graphics/SFMLCompat.h"
 #include "../Things/ItemType.h"
 #include "../Things/Items.h"
+#include "imgui.h"
+#include "nfd.h"
+#include <algorithm>
+#include <chrono>
+#include <string>
+#include <vector>
 
 #ifdef _WIN32
-#include <windows.h>
-#include <shlobj.h>
 #include <filesystem>
+#include <shlobj.h>
+#include <windows.h>
 #elif __APPLE__
-#include <unistd.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <objc/objc.h>
-#include <objc/runtime.h>
 #import <AppKit/AppKit.h>
 #import <CoreGraphics/CoreGraphics.h>
-#elif __linux__
-#include <unistd.h>
-#include <sys/types.h>
+#include <objc/objc.h>
+#include <objc/runtime.h>
 #include <pwd.h>
+#include <sys/types.h>
+#include <unistd.h>
+#elif __linux__
+#include <pwd.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 namespace Tools {
-    inline void ensureAlphaChannel(sf::Image &image);
+inline void ensureAlphaChannel(sf::Image& image);
 
-    inline void imageRemoveMagenta(sf::Image &image);
+inline void imageRemoveMagenta(sf::Image& image);
 
-    enum EXPORT_OPTIONS {
-        PNG = 0,
-        BMP = 1,
-        JPG = 2,
-        ITF = 3,
-        TOML = 4
-    };
+enum EXPORT_OPTIONS {
+	PNG = 0,
+	BMP = 1,
+	JPG = 2,
+	ITF = 3,
+	TOML = 4
+};
 
-    inline std::string getFormatString(EXPORT_OPTIONS option) {
-        switch (option) {
-            case PNG:
-                return ".png";
-            case BMP:
-                return ".bmp";
-            case JPG:
-                return ".jpg";
-            case TOML:
-                return ".toml";
-            case ITF:
-                return ".itf";
-            default:
-                return ".png";
-        }
-    }
+inline std::string getFormatString(EXPORT_OPTIONS option) {
+	switch (option) {
+	case PNG:
+		return ".png";
+	case BMP:
+		return ".bmp";
+	case JPG:
+		return ".jpg";
+	case TOML:
+		return ".toml";
+	case ITF:
+		return ".itf";
+	default:
+		return ".png";
+	}
+}
 
-    inline std::string openFileDialog(const std::vector<std::string> &extensions) {
-        NFD_Init();
-        nfdu8char_t *outPath = nullptr;
+inline std::string openFileDialog(const std::vector<std::string>& extensions) {
+	NFD_Init();
+	nfdu8char_t* outPath = nullptr;
 
-        // Create filter items dynamically based on input extensions
-        int filtersCount = (int) extensions.size();
-        std::vector<nfdu8filteritem_t> filters(filtersCount);
-        for (int i = 0; i < filtersCount; i++) {
-            const auto &ext = extensions[i];
-            std::string name = ext + " Files";
-            std::string pattern = ext;
-            filters[i].name = name.c_str();
-            filters[i].spec = pattern.c_str();
-        }
+	// Create filter items dynamically based on input extensions
+	int filtersCount = (int)extensions.size();
+	std::vector<nfdu8filteritem_t> filters(filtersCount);
+	for (int i = 0; i < filtersCount; i++) {
+		const auto& ext = extensions[i];
+		std::string name = ext + " Files";
+		std::string pattern = ext;
+		filters[i].name = name.c_str();
+		filters[i].spec = pattern.c_str();
+	}
 
-        // Open the file dialog using nativefiledialog-extended API
-        nfdresult_t result = NFD_OpenDialogU8(&outPath, filters.data(), filtersCount, nullptr);
-        std::string chosenPath;
+	// Open the file dialog using nativefiledialog-extended API
+	nfdresult_t result = NFD_OpenDialogU8(&outPath, filters.data(), filtersCount, nullptr);
+	std::string chosenPath;
 
-        if (result == NFD_OKAY) {
-            chosenPath = outPath;
-            NFD_FreePathU8(outPath);
-        } else if (result == NFD_CANCEL) {
-            puts("File dialogue cancelled.");
-        } else {
-            printf("Error: %s\n", NFD_GetError());
-        }
+	if (result == NFD_OKAY) {
+		chosenPath = outPath;
+		NFD_FreePathU8(outPath);
+	} else if (result == NFD_CANCEL) {
+		puts("File dialogue cancelled.");
+	} else {
+		printf("Error: %s\n", NFD_GetError());
+	}
 
-        NFD_Quit();
-        return chosenPath;
-    }
+	NFD_Quit();
+	return chosenPath;
+}
 
-    inline std::string getDesktopPath() {
-        std::string desktopPath;
+inline std::string getDesktopPath() {
+	std::string desktopPath;
 
 #ifdef _WIN32
-        char path[MAX_PATH];
-        if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, path))) {
-            desktopPath = path;
-        } else {
-            desktopPath = "C:\\Users\\Default\\Desktop";  // Fallback
-        }
+	char path[MAX_PATH];
+	if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, path))) {
+		desktopPath = path;
+	} else {
+		desktopPath = "C:\\Users\\Default\\Desktop"; // Fallback
+	}
 #elif __APPLE__ || __linux__
-        struct passwd *pw = getpwuid(getuid());
-        if (pw && pw->pw_dir) {
-            desktopPath = std::string(pw->pw_dir) + "/Desktop";
-        } else {
-            desktopPath = "/home/default/Desktop";  // Fallback
-        }
+	struct passwd* pw = getpwuid(getuid());
+	if (pw && pw->pw_dir) {
+		desktopPath = std::string(pw->pw_dir) + "/Desktop";
+	} else {
+		desktopPath = "/home/default/Desktop"; // Fallback
+	}
 #endif
 
-        return desktopPath;
-    }
+	return desktopPath;
+}
 
-    inline std::string openFileDialogChooseFolder() {
-        NFD_Init();
-        nfdu8char_t *outPath = nullptr;
+inline std::string openFileDialogChooseFolder() {
+	NFD_Init();
+	nfdu8char_t* outPath = nullptr;
 
-        nfdresult_t result = NFD_PickFolderU8(&outPath, nullptr);
-        std::string chosenFolderPath;
+	nfdresult_t result = NFD_PickFolderU8(&outPath, nullptr);
+	std::string chosenFolderPath;
 
-        if (result == NFD_OKAY) {
-            chosenFolderPath = outPath;
-            NFD_FreePathU8(outPath);
-        } else if (result == NFD_CANCEL) {
-            puts("User pressed cancel.");
-        } else {
-            printf("Error: %s\n", NFD_GetError());
-        }
+	if (result == NFD_OKAY) {
+		chosenFolderPath = outPath;
+		NFD_FreePathU8(outPath);
+	} else if (result == NFD_CANCEL) {
+		puts("User pressed cancel.");
+	} else {
+		printf("Error: %s\n", NFD_GetError());
+	}
 
-        NFD_Quit();
-        return chosenFolderPath;
-    }
+	NFD_Quit();
+	return chosenFolderPath;
+}
 
-    inline bool isValidFolderPath(const std::string &path) {
-        return std::filesystem::exists(path) && std::filesystem::is_directory(path);
-    }
+inline bool isValidFolderPath(const std::string& path) {
+	return std::filesystem::exists(path) && std::filesystem::is_directory(path);
+}
 
-    inline bool isPresentFileExtensionInAPath(const std::string &path, std::string extension) {
-        if (!std::filesystem::is_directory(path)) {
-            return false;
-        }
+inline bool isPresentFileExtensionInAPath(const std::string& path, std::string extension) {
+	if (!std::filesystem::is_directory(path)) {
+		return false;
+	}
 
-        for (const auto &entry: std::filesystem::directory_iterator(path)) {
-            if (std::filesystem::is_regular_file(entry)) {
-                std::string fileExtension = entry.path().extension().string();
-                if (fileExtension == extension) {
-                    return true;
-                }
-            }
-        }
+	for (const auto& entry : std::filesystem::directory_iterator(path)) {
+		if (std::filesystem::is_regular_file(entry)) {
+			std::string fileExtension = entry.path().extension().string();
+			if (fileExtension == extension) {
+				return true;
+			}
+		}
+	}
 
-        return false;
-    }
+	return false;
+}
 
-    inline std::string findFile(const std::string &path, const std::string &extension) {
-        if (!std::filesystem::is_directory(path)) {
-            return "";
-        }
+inline std::string findFile(const std::string& path, const std::string& extension) {
+	if (!std::filesystem::is_directory(path)) {
+		return "";
+	}
 
-        for (const auto &entry: std::filesystem::directory_iterator(path)) {
-            if (std::filesystem::is_regular_file(entry)) {
-                if (entry.path().extension() == extension) {
-                    return entry.path().string();
-                }
-            }
-        }
+	for (const auto& entry : std::filesystem::directory_iterator(path)) {
+		if (std::filesystem::is_regular_file(entry)) {
+			if (entry.path().extension() == extension) {
+				return entry.path().string();
+			}
+		}
+	}
 
-        return "";
-    }
+	return "";
+}
 
-    inline void removeSuffix(std::string &str, const std::string &suffix) {
-        if (str.size() >= suffix.size() && str.rfind(suffix) == str.size() - suffix.size()) {
-            str.erase(str.size() - suffix.size());
-        }
-    }
+inline void removeSuffix(std::string& str, const std::string& suffix) {
+	if (str.size() >= suffix.size() && str.rfind(suffix) == str.size() - suffix.size()) {
+		str.erase(str.size() - suffix.size());
+	}
+}
 
-    inline std::string getSuffix(const std::string &filePath) {
-        size_t dotPos = filePath.find_last_of('.');
-        if (dotPos == std::string::npos) {
-            return ""; // No extension found
-        }
-        return filePath.substr(dotPos); // Includes the dot
-    }
+inline std::string getSuffix(const std::string& filePath) {
+	size_t dotPos = filePath.find_last_of('.');
+	if (dotPos == std::string::npos) {
+		return ""; // No extension found
+	}
+	return filePath.substr(dotPos); // Includes the dot
+}
 
-    inline std::string formatDuration(std::chrono::milliseconds duration) {
-        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration - minutes);
-        return std::to_string(minutes.count()) + " min " + std::to_string(seconds.count()) + " sec";
-    }
+inline std::string formatDuration(std::chrono::milliseconds duration) {
+	auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration - minutes);
+	return std::to_string(minutes.count()) + " min " + std::to_string(seconds.count()) + " sec";
+}
 
-    inline std::string trim(const std::string &str) {
-        auto start = std::find_if_not(str.begin(), str.end(), ::isspace);
-        auto end = std::find_if_not(str.rbegin(), str.rend(), ::isspace).base();
-        return (start < end) ? std::string(start, end) : "";
-    }
+inline std::string trim(const std::string& str) {
+	auto start = std::find_if_not(str.begin(), str.end(), ::isspace);
+	auto end = std::find_if_not(str.rbegin(), str.rend(), ::isspace).base();
+	return (start < end) ? std::string(start, end) : "";
+}
 
-    inline ImU32 ParseHexColor(const std::string &hex) {
-        // Default to white with full alpha
-        unsigned int color = 0xFFFFFFFF;
+inline ImU32 ParseHexColor(const std::string& hex) {
+	// Default to white with full alpha
+	unsigned int color = 0xFFFFFFFF;
 
-        if (hex[0] == '#') {
-            std::stringstream ss;
-            ss << std::hex << hex.substr(1);  // Skip '#'
-            ss >> color;
+	if (hex[0] == '#') {
+		std::stringstream ss;
+		ss << std::hex << hex.substr(1); // Skip '#'
+		ss >> color;
 
-            if (hex.length() == 7) {
-                // #RRGGBB -> Append full alpha (255)
-                color = (color << 8) | 0xFF;
-            }
-        }
+		if (hex.length() == 7) {
+			// #RRGGBB -> Append full alpha (255)
+			color = (color << 8) | 0xFF;
+		}
+	}
 
-        // Corrected byte order for IM_COL32
-        return IM_COL32(
-                (color >> 24) & 0xFF,  // Red
-                (color >> 16) & 0xFF,  // Green
-                (color >> 8) & 0xFF,   // Blue
-                color & 0xFF           // Alpha
-        );
-    }
+	// Corrected byte order for IM_COL32
+	return IM_COL32((color >> 24) & 0xFF, // Red
+					(color >> 16) & 0xFF, // Green
+					(color >> 8) & 0xFF,  // Blue
+					color & 0xFF		  // Alpha
+	);
+}
 
-    inline bool pasteTextureFromClipboard(std::shared_ptr<sf::Texture> texture, bool addAlphaChannel = true,
-                                                 bool removeMagenta = true) {
+inline bool pasteTextureFromClipboard(std::shared_ptr<sf::Texture> texture, bool addAlphaChannel = true,
+									  bool removeMagenta = true) {
 #ifdef _WIN32
-        if (!OpenClipboard(nullptr)) return false;
+	if (!OpenClipboard(nullptr))
+		return false;
 
-        HBITMAP hBitmap = (HBITMAP) GetClipboardData(CF_BITMAP);
-        if (hBitmap) {
-            BITMAP bmp;
-            GetObject(hBitmap, sizeof(BITMAP), &bmp);
+	HBITMAP hBitmap = (HBITMAP)GetClipboardData(CF_BITMAP);
+	if (hBitmap) {
+		BITMAP bmp;
+		GetObject(hBitmap, sizeof(BITMAP), &bmp);
 
-            sf::Image image{sf::Vector2u(bmp.bmWidth, bmp.bmHeight), sf::Color::Transparent};
+		sf::Image image{sf::Vector2u(bmp.bmWidth, bmp.bmHeight), sf::Color::Transparent};
 
-            HDC hdc = CreateCompatibleDC(nullptr);
-            SelectObject(hdc, hBitmap);
+		HDC hdc = CreateCompatibleDC(nullptr);
+		SelectObject(hdc, hBitmap);
 
-            for (int y = 0; y < bmp.bmHeight; ++y) {
-                for (int x = 0; x < bmp.bmWidth; ++x) {
-                    COLORREF color = GetPixel(hdc, x, y);
-                    image.setPixel(sf::Vector2u(x, y),
-                                   sf::Color(GetRValue(color), GetGValue(color), GetBValue(color), 255));
-                }
-            }
-            DeleteDC(hdc);
+		for (int y = 0; y < bmp.bmHeight; ++y) {
+			for (int x = 0; x < bmp.bmWidth; ++x) {
+				COLORREF color = GetPixel(hdc, x, y);
+				image.setPixel(sf::Vector2u(x, y),
+							   sf::Color(GetRValue(color), GetGValue(color), GetBValue(color), 255));
+			}
+		}
+		DeleteDC(hdc);
 
-            // Ensure 32-bit RGBA
-            if (addAlphaChannel) {
-                ensureAlphaChannel(image);
-            }
-            if (removeMagenta) {
-                imageRemoveMagenta(image);
-            }
+		// Ensure 32-bit RGBA
+		if (addAlphaChannel) {
+			ensureAlphaChannel(image);
+		}
+		if (removeMagenta) {
+			imageRemoveMagenta(image);
+		}
 
-            if (!texture->loadFromImage(image)) {
-                CloseClipboard();
-                return false;
-            }
-            CloseClipboard();
-            return true;
-        }
+		if (!texture->loadFromImage(image)) {
+			CloseClipboard();
+			return false;
+		}
+		CloseClipboard();
+		return true;
+	}
 
-        CloseClipboard();
-        return false;
+	CloseClipboard();
+	return false;
 #elif __APPLE__
-        // macOS implementation using Cocoa APIs
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            NSArray* types = [pasteboard types];
-            
-            // Try to get image data
-            if ([types containsObject:NSPasteboardTypePNG]) {
-                NSData* pngData = [pasteboard dataForType:NSPasteboardTypePNG];
-                if (pngData) {
-                    NSImage* nsImage = [[NSImage alloc] initWithData:pngData];
-                    if (nsImage) {
-                        CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
-                        if (cgImage) {
-                            size_t width = CGImageGetWidth(cgImage);
-                            size_t height = CGImageGetHeight(cgImage);
-                            
-                            sf::Image image{sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)), sf::Color::Transparent};
-                            
-                            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-                            size_t bytesPerPixel = 4;
-                            size_t bytesPerRow = bytesPerPixel * width;
-                            size_t bufferSize = bytesPerRow * height;
-                            std::vector<uint8_t> buffer(bufferSize);
-                            
-                            CGContextRef context = CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-                            
-                            if (context) {
-                                CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
-                                
-                                // Convert from RGBA to SFML format
-                                for (size_t y = 0; y < height; ++y) {
-                                    for (size_t x = 0; x < width; ++x) {
-                                        size_t index = (y * width + x) * 4;
-                                        uint8_t r = buffer[index];
-                                        uint8_t g = buffer[index + 1];
-                                        uint8_t b = buffer[index + 2];
-                                        uint8_t a = buffer[index + 3];
-                                        image.setPixel(sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)), 
-                                                       sf::Color(r, g, b, a));
-                                    }
-                                }
-                                
-                                CGContextRelease(context);
-                                CGColorSpaceRelease(colorSpace);
-                                
-                                // Ensure 32-bit RGBA
-                                if (addAlphaChannel) {
-                                    ensureAlphaChannel(image);
-                                }
-                                if (removeMagenta) {
-                                    imageRemoveMagenta(image);
-                                }
-                                
-                                return texture->loadFromImage(image);
-                            }
-                            CGColorSpaceRelease(colorSpace);
-                        }
-                    }
-                }
-            }
-            
-            // Fallback to TIFF if PNG not available
-            if ([types containsObject:NSPasteboardTypeTIFF]) {
-                NSData* tiffData = [pasteboard dataForType:NSPasteboardTypeTIFF];
-                if (tiffData) {
-                    NSImage* nsImage = [[NSImage alloc] initWithData:tiffData];
-                    if (nsImage) {
-                        CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
-                        if (cgImage) {
-                            size_t width = CGImageGetWidth(cgImage);
-                            size_t height = CGImageGetHeight(cgImage);
-                            
-                            sf::Image image{sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)), sf::Color::Transparent};
-                            
-                            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-                            size_t bytesPerPixel = 4;
-                            size_t bytesPerRow = bytesPerPixel * width;
-                            size_t bufferSize = bytesPerRow * height;
-                            std::vector<uint8_t> buffer(bufferSize);
-                            
-                            CGContextRef context = CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-                            
-                            if (context) {
-                                CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
-                                
-                                // Convert from RGBA to SFML format
-                                for (size_t y = 0; y < height; ++y) {
-                                    for (size_t x = 0; x < width; ++x) {
-                                        size_t index = (y * width + x) * 4;
-                                        uint8_t r = buffer[index];
-                                        uint8_t g = buffer[index + 1];
-                                        uint8_t b = buffer[index + 2];
-                                        uint8_t a = buffer[index + 3];
-                                        image.setPixel(sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)), 
-                                                       sf::Color(r, g, b, a));
-                                    }
-                                }
-                                
-                                CGContextRelease(context);
-                                CGColorSpaceRelease(colorSpace);
-                                
-                                // Ensure 32-bit RGBA
-                                if (addAlphaChannel) {
-                                    ensureAlphaChannel(image);
-                                }
-                                if (removeMagenta) {
-                                    imageRemoveMagenta(image);
-                                }
-                                
-                                return texture->loadFromImage(image);
-                            }
-                            CGColorSpaceRelease(colorSpace);
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-#else
-        // Linux: Not implemented yet
-        return false;
-#endif
-    }
+	// macOS implementation using Cocoa APIs
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		NSArray* types = [pasteboard types];
 
-    // Platform-specific clipboard check functions
-    inline bool hasImageInClipboard() {
+		// Try to get image data
+		if ([types containsObject:NSPasteboardTypePNG]) {
+			NSData* pngData = [pasteboard dataForType:NSPasteboardTypePNG];
+			if (pngData) {
+				NSImage* nsImage = [[NSImage alloc] initWithData:pngData];
+				if (nsImage) {
+					CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
+					if (cgImage) {
+						size_t width = CGImageGetWidth(cgImage);
+						size_t height = CGImageGetHeight(cgImage);
+
+						sf::Image image{
+							sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)),
+							sf::Color::Transparent};
+
+						CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+						size_t bytesPerPixel = 4;
+						size_t bytesPerRow = bytesPerPixel * width;
+						size_t bufferSize = bytesPerRow * height;
+						std::vector<uint8_t> buffer(bufferSize);
+
+						CGContextRef context =
+							CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace,
+												  kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+
+						if (context) {
+							CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
+
+							// Convert from RGBA to SFML format
+							for (size_t y = 0; y < height; ++y) {
+								for (size_t x = 0; x < width; ++x) {
+									size_t index = (y * width + x) * 4;
+									uint8_t r = buffer[index];
+									uint8_t g = buffer[index + 1];
+									uint8_t b = buffer[index + 2];
+									uint8_t a = buffer[index + 3];
+									image.setPixel(
+										sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)),
+										sf::Color(r, g, b, a));
+								}
+							}
+
+							CGContextRelease(context);
+							CGColorSpaceRelease(colorSpace);
+
+							// Ensure 32-bit RGBA
+							if (addAlphaChannel) {
+								ensureAlphaChannel(image);
+							}
+							if (removeMagenta) {
+								imageRemoveMagenta(image);
+							}
+
+							return texture->loadFromImage(image);
+						}
+						CGColorSpaceRelease(colorSpace);
+					}
+				}
+			}
+		}
+
+		// Fallback to TIFF if PNG not available
+		if ([types containsObject:NSPasteboardTypeTIFF]) {
+			NSData* tiffData = [pasteboard dataForType:NSPasteboardTypeTIFF];
+			if (tiffData) {
+				NSImage* nsImage = [[NSImage alloc] initWithData:tiffData];
+				if (nsImage) {
+					CGImageRef cgImage = [nsImage CGImageForProposedRect:NULL context:nil hints:nil];
+					if (cgImage) {
+						size_t width = CGImageGetWidth(cgImage);
+						size_t height = CGImageGetHeight(cgImage);
+
+						sf::Image image{
+							sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height)),
+							sf::Color::Transparent};
+
+						CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+						size_t bytesPerPixel = 4;
+						size_t bytesPerRow = bytesPerPixel * width;
+						size_t bufferSize = bytesPerRow * height;
+						std::vector<uint8_t> buffer(bufferSize);
+
+						CGContextRef context =
+							CGBitmapContextCreate(buffer.data(), width, height, 8, bytesPerRow, colorSpace,
+												  kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+
+						if (context) {
+							CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgImage);
+
+							// Convert from RGBA to SFML format
+							for (size_t y = 0; y < height; ++y) {
+								for (size_t x = 0; x < width; ++x) {
+									size_t index = (y * width + x) * 4;
+									uint8_t r = buffer[index];
+									uint8_t g = buffer[index + 1];
+									uint8_t b = buffer[index + 2];
+									uint8_t a = buffer[index + 3];
+									image.setPixel(
+										sf::Vector2u(static_cast<unsigned int>(x), static_cast<unsigned int>(y)),
+										sf::Color(r, g, b, a));
+								}
+							}
+
+							CGContextRelease(context);
+							CGColorSpaceRelease(colorSpace);
+
+							// Ensure 32-bit RGBA
+							if (addAlphaChannel) {
+								ensureAlphaChannel(image);
+							}
+							if (removeMagenta) {
+								imageRemoveMagenta(image);
+							}
+
+							return texture->loadFromImage(image);
+						}
+						CGColorSpaceRelease(colorSpace);
+					}
+				}
+			}
+		}
+	}
+	return false;
+#else
+	// Linux: Not implemented yet
+	return false;
+#endif
+}
+
+// Platform-specific clipboard check functions
+inline bool hasImageInClipboard() {
 #ifdef _WIN32
-        return IsClipboardFormatAvailable(CF_BITMAP) != 0;
+	return IsClipboardFormatAvailable(CF_BITMAP) != 0;
 #elif __APPLE__
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            NSArray* types = [pasteboard types];
-            return [types containsObject:NSPasteboardTypePNG] || [types containsObject:NSPasteboardTypeTIFF];
-        }
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		NSArray* types = [pasteboard types];
+		return [types containsObject:NSPasteboardTypePNG] || [types containsObject:NSPasteboardTypeTIFF];
+	}
 #else
-        return false;
+	return false;
 #endif
-    }
+}
 
-    inline bool hasItemTypeInClipboard() {
+inline bool hasItemTypeInClipboard() {
 #ifdef _WIN32
-        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
-        return IsClipboardFormatAvailable(format) != 0;
+	static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
+	return IsClipboardFormatAvailable(format) != 0;
 #elif __APPLE__
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            NSArray* types = [pasteboard types];
-            NSString* customType = @"com.sprforge.ItemTypeBinary";
-            return [types containsObject:customType];
-        }
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		NSArray* types = [pasteboard types];
+		NSString* customType = @"com.sprforge.ItemTypeBinary";
+		return [types containsObject:customType];
+	}
 #else
-        return false;
+	return false;
 #endif
-    }
+}
 
 // Ensures the image has an alpha channel (RGBA instead of RGB)
-    inline void ensureAlphaChannel(sf::Image &image) {
-        sf::Vector2u size = image.getSize();
-        sf::Image temp{sf::Vector2u(size.x, size.y), sf::Color::Transparent}; // Create a 32-bit transparent image
+inline void ensureAlphaChannel(sf::Image& image) {
+	sf::Vector2u size = image.getSize();
+	sf::Image temp{sf::Vector2u(size.x, size.y), sf::Color::Transparent}; // Create a 32-bit transparent image
 
-        for (unsigned int y = 0; y < size.y; ++y) {
-            for (unsigned int x = 0; x < size.x; ++x) {
-                sf::Color pixel = image.getPixel({x, y});
-                temp.setPixel(sf::Vector2u(x, y), sf::Color(pixel.r, pixel.g, pixel.b, 255)); // Ensure full opacity
-            }
-        }
+	for (unsigned int y = 0; y < size.y; ++y) {
+		for (unsigned int x = 0; x < size.x; ++x) {
+			sf::Color pixel = image.getPixel({x, y});
+			temp.setPixel(sf::Vector2u(x, y), sf::Color(pixel.r, pixel.g, pixel.b, 255)); // Ensure full opacity
+		}
+	}
 
-        image = temp;
-    }
+	image = temp;
+}
 
 // Replaces magenta (255,0,255) with transparency
-    inline void imageRemoveMagenta(sf::Image &image) {
-        sf::Vector2u size = image.getSize();
-        for (unsigned int y = 0; y < size.y; ++y) {
-            for (unsigned int x = 0; x < size.x; ++x) {
-                sf::Color pixel = image.getPixel({x, y});
-                if (pixel.r == 255 && pixel.g == 0 && pixel.b == 255) { // Magenta color
-                    image.setPixel(sf::Vector2u(x, y), sf::Color(0, 0, 0, 0)); // Fully transparent
-                }
-            }
-        }
-    }
+inline void imageRemoveMagenta(sf::Image& image) {
+	sf::Vector2u size = image.getSize();
+	for (unsigned int y = 0; y < size.y; ++y) {
+		for (unsigned int x = 0; x < size.x; ++x) {
+			sf::Color pixel = image.getPixel({x, y});
+			if (pixel.r == 255 && pixel.g == 0 && pixel.b == 255) {		   // Magenta color
+				image.setPixel(sf::Vector2u(x, y), sf::Color(0, 0, 0, 0)); // Fully transparent
+			}
+		}
+	}
+}
 
 // Copies an SFML texture to the clipboard
-    inline bool copyTextureToClipboard(const sf::Texture &texture) {
-        sf::Image image = texture.copyToImage();
-        sf::Vector2u size = image.getSize();
+inline bool copyTextureToClipboard(const sf::Texture& texture) {
+	sf::Image image = texture.copyToImage();
+	sf::Vector2u size = image.getSize();
 
 #ifdef _WIN32
-        BITMAPINFOHEADER bi = {};
-        bi.biSize = sizeof(BITMAPINFOHEADER);
-        bi.biWidth = size.x;
-        bi.biHeight = -static_cast<LONG>(size.y);
-        bi.biPlanes = 1;
-        bi.biBitCount = 32; // 32-bit BGRX
-        bi.biCompression = BI_RGB;
-        bi.biSizeImage = size.x * size.y * 4;
+	BITMAPINFOHEADER bi = {};
+	bi.biSize = sizeof(BITMAPINFOHEADER);
+	bi.biWidth = size.x;
+	bi.biHeight = -static_cast<LONG>(size.y);
+	bi.biPlanes = 1;
+	bi.biBitCount = 32; // 32-bit BGRX
+	bi.biCompression = BI_RGB;
+	bi.biSizeImage = size.x * size.y * 4;
 
-        // Allocate memory for pixels
-        std::vector<uint8_t> dibData(size.x * size.y * 4);
-        uint8_t *bmpPixels = dibData.data();
+	// Allocate memory for pixels
+	std::vector<uint8_t> dibData(size.x * size.y * 4);
+	uint8_t* bmpPixels = dibData.data();
 
-        // Conversion RGBA (SFML) -> BGRX (Windows BMP)
-        const uint8_t *pixels = image.getPixelsPtr();
-        for (unsigned int i = 0; i < size.x * size.y; ++i) {
-            bmpPixels[i * 4 + 0] = pixels[i * 4 + 2]; // Blue
-            bmpPixels[i * 4 + 1] = pixels[i * 4 + 1]; // Green
-            bmpPixels[i * 4 + 2] = pixels[i * 4 + 0]; // Red
-            bmpPixels[i * 4 + 3] = 255;               // Alpha (ignorowane)
-        }
+	// Conversion RGBA (SFML) -> BGRX (Windows BMP)
+	const uint8_t* pixels = image.getPixelsPtr();
+	for (unsigned int i = 0; i < size.x * size.y; ++i) {
+		bmpPixels[i * 4 + 0] = pixels[i * 4 + 2]; // Blue
+		bmpPixels[i * 4 + 1] = pixels[i * 4 + 1]; // Green
+		bmpPixels[i * 4 + 2] = pixels[i * 4 + 0]; // Red
+		bmpPixels[i * 4 + 3] = 255;				  // Alpha (ignorowane)
+	}
 
-        // Create HBITMAP with DIB data
-        HDC hdc = GetDC(nullptr);
-        HBITMAP hBitmap = CreateDIBitmap(
-                hdc,
-                &bi,
-                CBM_INIT,
-                dibData.data(),
-                reinterpret_cast<BITMAPINFO *>(&bi),
-                DIB_RGB_COLORS
-        );
-        ReleaseDC(nullptr, hdc);
+	// Create HBITMAP with DIB data
+	HDC hdc = GetDC(nullptr);
+	HBITMAP hBitmap =
+		CreateDIBitmap(hdc, &bi, CBM_INIT, dibData.data(), reinterpret_cast<BITMAPINFO*>(&bi), DIB_RGB_COLORS);
+	ReleaseDC(nullptr, hdc);
 
-        if (!hBitmap) {
-            return false;
-        }
+	if (!hBitmap) {
+		return false;
+	}
 
-        // Copy HBITMAP to clipboard
-        if (OpenClipboard(nullptr)) {
-            EmptyClipboard();
-            SetClipboardData(CF_BITMAP, hBitmap);
-            CloseClipboard();
-            DeleteObject(hBitmap); // Clipboard stores value, so we delete only when error
-            return true;
-        }
+	// Copy HBITMAP to clipboard
+	if (OpenClipboard(nullptr)) {
+		EmptyClipboard();
+		SetClipboardData(CF_BITMAP, hBitmap);
+		CloseClipboard();
+		DeleteObject(hBitmap); // Clipboard stores value, so we delete only when error
+		return true;
+	}
 
-        DeleteObject(hBitmap);
-        return false;
+	DeleteObject(hBitmap);
+	return false;
 #elif __APPLE__
-        // macOS implementation using Cocoa APIs
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            [pasteboard clearContents];
-            
-            // Convert SFML image to NSImage
-            size_t width = size.x;
-            size_t height = size.y;
-            const uint8_t* pixels = image.getPixelsPtr();
-            
-            // Create CGImage from pixel data
-            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-            CGContextRef context = CGBitmapContextCreate(
-                const_cast<uint8_t*>(pixels),
-                width, height, 8, width * 4,
-                colorSpace,
-                kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big
-            );
-            
-            if (!context) {
-                CGColorSpaceRelease(colorSpace);
-                return false;
-            }
-            
-            CGImageRef cgImage = CGBitmapContextCreateImage(context);
-            CGContextRelease(context);
-            CGColorSpaceRelease(colorSpace);
-            
-            if (!cgImage) {
-                return false;
-            }
-            
-            // Create NSImage from CGImage
-            NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];
-            CGImageRelease(cgImage);
-            
-            if (!nsImage) {
-                return false;
-            }
-            
-            // Convert to PNG data
-            NSData* pngData = [nsImage TIFFRepresentation];
-            NSBitmapImageRep* bitmapRep = [NSBitmapImageRep imageRepWithData:pngData];
-            NSData* pngDataFinal = [bitmapRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
-            
-            if (pngDataFinal) {
-                return [pasteboard setData:pngDataFinal forType:NSPasteboardTypePNG];
-            }
-            
-            return false;
-        }
+	// macOS implementation using Cocoa APIs
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		[pasteboard clearContents];
+
+		// Convert SFML image to NSImage
+		size_t width = size.x;
+		size_t height = size.y;
+		const uint8_t* pixels = image.getPixelsPtr();
+
+		// Create CGImage from pixel data
+		CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+		CGContextRef context =
+			CGBitmapContextCreate(const_cast<uint8_t*>(pixels), width, height, 8, width * 4, colorSpace,
+								  kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+
+		if (!context) {
+			CGColorSpaceRelease(colorSpace);
+			return false;
+		}
+
+		CGImageRef cgImage = CGBitmapContextCreateImage(context);
+		CGContextRelease(context);
+		CGColorSpaceRelease(colorSpace);
+
+		if (!cgImage) {
+			return false;
+		}
+
+		// Create NSImage from CGImage
+		NSImage* nsImage = [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];
+		CGImageRelease(cgImage);
+
+		if (!nsImage) {
+			return false;
+		}
+
+		// Convert to PNG data
+		NSData* pngData = [nsImage TIFFRepresentation];
+		NSBitmapImageRep* bitmapRep = [NSBitmapImageRep imageRepWithData:pngData];
+		NSData* pngDataFinal = [bitmapRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+
+		if (pngDataFinal) {
+			return [pasteboard setData:pngDataFinal forType:NSPasteboardTypePNG];
+		}
+
+		return false;
+	}
 #else
-        // Linux: Not implemented yet
-        return false;
+	// Linux: Not implemented yet
+	return false;
 #endif
-    }
+}
 
-    inline bool copyItemTypeToClipboard(const ItemType &item) {
-        // Serialize to memory stream
-        std::stringstream stream;
-        Items::serializeItemType(stream, item);
-        std::string dataStr = stream.str();
-        std::vector<uint8_t> data(dataStr.begin(), dataStr.end());
+inline bool copyItemTypeToClipboard(const ItemType& item) {
+	// Serialize to memory stream
+	std::stringstream stream;
+	Items::serializeItemType(stream, item);
+	std::string dataStr = stream.str();
+	std::vector<uint8_t> data(dataStr.begin(), dataStr.end());
 
-        // Prepend data size header
-        size_t dataSize = data.size();
-        std::vector<uint8_t> finalData;
-        finalData.reserve(sizeof(dataSize) + dataSize);
-        finalData.insert(finalData.end(), reinterpret_cast<uint8_t *>(&dataSize),
-                         reinterpret_cast<uint8_t *>(&dataSize) + sizeof(dataSize));
-        finalData.insert(finalData.end(), data.begin(), data.end());
+	// Prepend data size header
+	size_t dataSize = data.size();
+	std::vector<uint8_t> finalData;
+	finalData.reserve(sizeof(dataSize) + dataSize);
+	finalData.insert(finalData.end(), reinterpret_cast<uint8_t*>(&dataSize),
+					 reinterpret_cast<uint8_t*>(&dataSize) + sizeof(dataSize));
+	finalData.insert(finalData.end(), data.begin(), data.end());
 
 #ifdef _WIN32
-        // Copy to clipboard
-        if (!OpenClipboard(nullptr)) return false;
+	// Copy to clipboard
+	if (!OpenClipboard(nullptr))
+		return false;
 
-        // Allocate global memory for the serialized data
-        HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, finalData.size());
-        if (!hGlobal) {
-            CloseClipboard();
-            return false;
-        }
+	// Allocate global memory for the serialized data
+	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, finalData.size());
+	if (!hGlobal) {
+		CloseClipboard();
+		return false;
+	}
 
-        // Lock memory and copy the data
-        void *pData = GlobalLock(hGlobal);
-        if (!pData) {
-            GlobalFree(hGlobal);
-            CloseClipboard();
-            return false;
-        }
+	// Lock memory and copy the data
+	void* pData = GlobalLock(hGlobal);
+	if (!pData) {
+		GlobalFree(hGlobal);
+		CloseClipboard();
+		return false;
+	}
 
-        memcpy(pData, finalData.data(), finalData.size());  // Copy serialized data to clipboard
-        GlobalUnlock(hGlobal);  // Unlock memory
+	memcpy(pData, finalData.data(), finalData.size()); // Copy serialized data to clipboard
+	GlobalUnlock(hGlobal);							   // Unlock memory
 
-        // Register clipboard format once
-        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
+	// Register clipboard format once
+	static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
 
-        // Empty clipboard and set new data
-        EmptyClipboard();
-        SetClipboardData(format, hGlobal);
+	// Empty clipboard and set new data
+	EmptyClipboard();
+	SetClipboardData(format, hGlobal);
 
-        CloseClipboard();
-        return true;
+	CloseClipboard();
+	return true;
 #elif __APPLE__
-        // macOS implementation using Cocoa APIs
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            [pasteboard clearContents];
-            
-            NSData* dataObj = [NSData dataWithBytes:finalData.data() length:finalData.size()];
-            NSString* customType = @"com.sprforge.ItemTypeBinary";
-            
-            return [pasteboard setData:dataObj forType:customType];
-        }
-#else
-        // Linux: Not implemented yet
-        return false;
-#endif
-    }
+	// macOS implementation using Cocoa APIs
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		[pasteboard clearContents];
 
-    inline bool pasteItemTypeFromClipboard(ItemType &itemType) {
+		NSData* dataObj = [NSData dataWithBytes:finalData.data() length:finalData.size()];
+		NSString* customType = @"com.sprforge.ItemTypeBinary";
+
+		return [pasteboard setData:dataObj forType:customType];
+	}
+#else
+	// Linux: Not implemented yet
+	return false;
+#endif
+}
+
+inline bool pasteItemTypeFromClipboard(ItemType& itemType) {
 #ifdef _WIN32
-        if (!OpenClipboard(nullptr)) return false;
+	if (!OpenClipboard(nullptr))
+		return false;
 
-        static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
-        HANDLE hData = GetClipboardData(format);
-        if (!hData) {
-            CloseClipboard();
-            return false;
-        }
+	static UINT format = RegisterClipboardFormatA("ItemTypeBinary");
+	HANDLE hData = GetClipboardData(format);
+	if (!hData) {
+		CloseClipboard();
+		return false;
+	}
 
-        void *pData = GlobalLock(hData);
-        if (!pData) {
-            CloseClipboard();
-            return false;
-        }
+	void* pData = GlobalLock(hData);
+	if (!pData) {
+		CloseClipboard();
+		return false;
+	}
 
-        size_t dataSize = GlobalSize(hData);
-        std::vector<uint8_t> finalData(dataSize);
-        memcpy(finalData.data(), pData, dataSize);
-        GlobalUnlock(hData);
-        CloseClipboard();
+	size_t dataSize = GlobalSize(hData);
+	std::vector<uint8_t> finalData(dataSize);
+	memcpy(finalData.data(), pData, dataSize);
+	GlobalUnlock(hData);
+	CloseClipboard();
 
-        // Validate size header
-        if (dataSize < sizeof(size_t)) return false;
-        size_t serializedSize;
-        memcpy(&serializedSize, finalData.data(), sizeof(serializedSize));
-        if (dataSize != sizeof(serializedSize) + serializedSize) return false;
+	// Validate size header
+	if (dataSize < sizeof(size_t))
+		return false;
+	size_t serializedSize;
+	memcpy(&serializedSize, finalData.data(), sizeof(serializedSize));
+	if (dataSize != sizeof(serializedSize) + serializedSize)
+		return false;
 
-        // Deserialize from memory stream
-        std::string dataStr(finalData.begin() + sizeof(serializedSize), finalData.end());
-        std::stringstream stream(dataStr);
-        Items::deserializeItemType(stream, itemType);
+	// Deserialize from memory stream
+	std::string dataStr(finalData.begin() + sizeof(serializedSize), finalData.end());
+	std::stringstream stream(dataStr);
+	Items::deserializeItemType(stream, itemType);
 
-        return true;
+	return true;
 #elif __APPLE__
-        // macOS implementation using Cocoa APIs
-        @autoreleasepool {
-            NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-            NSArray* types = [pasteboard types];
-            NSString* customType = @"com.sprforge.ItemTypeBinary";
-            
-            if (![types containsObject:customType]) {
-                return false;
-            }
-            
-            NSData* dataObj = [pasteboard dataForType:customType];
-            if (!dataObj) {
-                return false;
-            }
-            
-            size_t dataSize = [dataObj length];
-            std::vector<uint8_t> finalData(dataSize);
-            [dataObj getBytes:finalData.data() length:dataSize];
-            
-            // Validate size header
-            if (dataSize < sizeof(size_t)) return false;
-            size_t serializedSize;
-            memcpy(&serializedSize, finalData.data(), sizeof(serializedSize));
-            if (dataSize != sizeof(serializedSize) + serializedSize) return false;
-            
-            // Deserialize from memory stream
-            std::string dataStr(finalData.begin() + sizeof(serializedSize), finalData.end());
-            std::stringstream stream(dataStr);
-            Items::deserializeItemType(stream, itemType);
-            
-            return true;
-        }
+	// macOS implementation using Cocoa APIs
+	@autoreleasepool {
+		NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+		NSArray* types = [pasteboard types];
+		NSString* customType = @"com.sprforge.ItemTypeBinary";
+
+		if (![types containsObject:customType]) {
+			return false;
+		}
+
+		NSData* dataObj = [pasteboard dataForType:customType];
+		if (!dataObj) {
+			return false;
+		}
+
+		size_t dataSize = [dataObj length];
+		std::vector<uint8_t> finalData(dataSize);
+		[dataObj getBytes:finalData.data() length:dataSize];
+
+		// Validate size header
+		if (dataSize < sizeof(size_t))
+			return false;
+		size_t serializedSize;
+		memcpy(&serializedSize, finalData.data(), sizeof(serializedSize));
+		if (dataSize != sizeof(serializedSize) + serializedSize)
+			return false;
+
+		// Deserialize from memory stream
+		std::string dataStr(finalData.begin() + sizeof(serializedSize), finalData.end());
+		std::stringstream stream(dataStr);
+		Items::deserializeItemType(stream, itemType);
+
+		return true;
+	}
 #else
-        // Linux: Not implemented yet
-        return false;
+	// Linux: Not implemented yet
+	return false;
 #endif
-    }
+}
 
 /**
  * @brief Helper method for graying out ImGui widget
@@ -705,77 +712,65 @@ namespace Tools {
  * @param predicate when true = grayed out
  * @return count of colors pushed onto the stack (later used to pop)
  */
-    inline int pushImGuiGray(bool predicate) {
-        if (predicate) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.6f)); // Grayed-out color
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f)); // Grayed-out hover color
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Grayed-out active color
-        } else {
-            ImGuiStyle &style = ImGui::GetStyle();
-            ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, style.Colors[ImGuiCol_ButtonHovered]);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, style.Colors[ImGuiCol_ButtonActive]);
-        }
+inline int pushImGuiGray(bool predicate) {
+	if (predicate) {
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.6f));		   // Grayed-out color
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f)); // Grayed-out hover color
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));  // Grayed-out active color
+	} else {
+		ImGuiStyle& style = ImGui::GetStyle();
+		ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, style.Colors[ImGuiCol_ButtonHovered]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, style.Colors[ImGuiCol_ButtonActive]);
+	}
 
-        // Update when you push more colors
-        return 3;
-    }
+	// Update when you push more colors
+	return 3;
+}
 
-    inline std::vector<std::string> getImageExtensions() {
-        return {
-                "bmp",
-                "png",
-                "tga",
-                "jpg",
-                "gif",
-                "psd",
-                "hdr",
-                "pic",
-                "pnm"
-        };
-    }
+inline std::vector<std::string> getImageExtensions() {
+	return {"bmp", "png", "tga", "jpg", "gif", "psd", "hdr", "pic", "pnm"};
+}
 
-    inline std::string getExtensionFromPath(const std::string &filePath) {
-        std::filesystem::path path(filePath);
-        std::string ext = path.extension().string(); // e.g., ".jpg"
+inline std::string getExtensionFromPath(const std::string& filePath) {
+	std::filesystem::path path(filePath);
+	std::string ext = path.extension().string(); // e.g., ".jpg"
 
-        if (!ext.empty() && ext[0] == '.')
-            ext.erase(0, 1); // Remove leading dot
+	if (!ext.empty() && ext[0] == '.')
+		ext.erase(0, 1); // Remove leading dot
 
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        return ext;
-    }
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	return ext;
+}
 
-    inline std::string cleanPathIntoFolderPath(const std::string &path) {
-        // Find last slash (both Windows '\' and Unix '/' supported)
-        size_t lastSlash = path.find_last_of("\\/");
-        if (lastSlash == std::string::npos) {
-            return "";
-        }
+inline std::string cleanPathIntoFolderPath(const std::string& path) {
+	// Find last slash (both Windows '\' and Unix '/' supported)
+	size_t lastSlash = path.find_last_of("\\/");
+	if (lastSlash == std::string::npos) {
+		return "";
+	}
 
-        // Extract last component (file or folder name)
-        std::string lastPart = path.substr(lastSlash + 1);
+	// Extract last component (file or folder name)
+	std::string lastPart = path.substr(lastSlash + 1);
 
-        // Check if lastPart contains a dot ('.') indicating extension
-        size_t dotPos = lastPart.find_last_of('.');
-        if (dotPos != std::string::npos && dotPos != 0) {
-            // There is an extension, so return path up to last slash only (folder)
-            return path.substr(0, lastSlash);
-        }
+	// Check if lastPart contains a dot ('.') indicating extension
+	size_t dotPos = lastPart.find_last_of('.');
+	if (dotPos != std::string::npos && dotPos != 0) {
+		// There is an extension, so return path up to last slash only (folder)
+		return path.substr(0, lastSlash);
+	}
 
-        // No extension detected, assume it's a folder, return as is
-        return path;
-    }
+	// No extension detected, assume it's a folder, return as is
+	return path;
+}
 
 // String comprasion
-    inline bool ichar_equals(char a, char b) {
-        return std::tolower(static_cast<unsigned char>(a)) ==
-               std::tolower(static_cast<unsigned char>(b));
-    }
+inline bool ichar_equals(char a, char b) {
+	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+}
 
 // Checks equality of 2 strings, ignoring case-insensitivity
-    inline bool iequals(const std::string &a, const std::string &b) {
-        return a.size() == b.size() &&
-               std::equal(a.begin(), a.end(), b.begin(), ichar_equals);
-    }
+inline bool iequals(const std::string& a, const std::string& b) {
+	return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), ichar_equals);
 }
+} // namespace Tools

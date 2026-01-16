@@ -7,5 +7,5 @@
 #elif defined(_MSC_VER)
 #define FUNC_NAME __FUNCSIG__
 #else
-    #define FUNC_NAME __func__
+#define FUNC_NAME __func__
 #endif

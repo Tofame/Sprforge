@@ -4,9 +4,8 @@
 
 class MissileType : public ThingType {
 public:
-    MissileType();
-    virtual ~MissileType() = default;
-    MissileType(const MissileType&) = default;
-    MissileType& operator=(const MissileType&) = default;
+	MissileType();
+	virtual ~MissileType() = default;
+	MissileType(const MissileType&) = default;
+	MissileType& operator=(const MissileType&) = default;
 };
-
