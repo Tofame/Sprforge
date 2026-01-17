@@ -8,12 +8,15 @@
 #include "../Helper/SavedData.h"
 #include "../Misc/Timer.h"
 #include "../Misc/definitions.h"
+#include "../Protocol/DatReaderWriter.h"
 #include "../Things/Effects.h"
 #include "../Things/Missiles.h"
 #include "../Things/Outfits.h"
 #include "../Things/ThingType.h"
 #include "AssetsManager.h"
+#include <fmt/core.h>
 #include <imgui_stdlib.h>
+
 
 namespace {
 
@@ -728,443 +731,50 @@ void AssetsManager::compileOTDat(const std::string& outputFilePath) {
 }
 
 void AssetsManager::loadOTDat(const std::string& datFilePath) {
-	// TO-DO protocol version should be detected, as currently OTDat is done for 8.6.
-	// Higher protocol versions had offset of all flags +1 because there was a flag inserted in the middle xD
-
+	// Uses the new protocol-aware DatReader for proper version support (8.6 through 10.98+)
 	Timer timer("Loading .dat (OTDat)");
 
 	std::string decidedPath = datFilePath;
 	if (decidedPath.empty()) {
 		decidedPath = ConfigManager::getInstance()->getPathAssets() + ConfigManager::getInstance()->getDatFileName();
-	};
+	}
 
 	try {
-		// Open the file in binary mode for reading
-		std::ifstream inFile(decidedPath, std::ios::binary);
-		if (!inFile.is_open()) {
-			Warninger::sendErrorMsg(FUNC_NAME, "Failed to open file for reading: " + decidedPath);
+		// Clear existing data
+		Items::clearItemTypes();
+		Outfits::clearOutfitTypes();
+		Effects::clearEffectTypes();
+		Missiles::clearMissileTypes();
+
+		// Use the new DatReader with protocol version detection
+		DatReader reader;
+
+		// If user has forced a specific version, use it
+		const ClientVersion* forcedVersion = nullptr;
+		if (m_assetsInfo.detectedVersion.has_value()) {
+			forcedVersion = &m_assetsInfo.detectedVersion.value();
+		}
+
+		// Read the dat file with auto-detection or forced settings
+		auto result = reader.readDatFile(decidedPath, forcedVersion, m_assetsInfo.extended, m_assetsInfo.frameDurations,
+										 m_assetsInfo.frameGroups);
+
+		if (!result.success) {
+			Warninger::sendErrorMsg(FUNC_NAME, "Failed to load dat file: " + result.errorMessage);
 			return;
 		}
 
-		// Read .dat signature (4 bytes)
-		uint32_t datSignature;
-		inFile.read(reinterpret_cast<char*>(&datSignature), sizeof(datSignature));
-
-		// Read item count (2 bytes)
-		uint16_t itemCount;
-		inFile.read(reinterpret_cast<char*>(&itemCount), sizeof(itemCount));
-
-		// Read outfit count, effect count, and missile count (2 bytes each)
-		uint16_t outfitCount, effectCount, missileCount;
-		inFile.read(reinterpret_cast<char*>(&outfitCount), sizeof(outfitCount));
-		inFile.read(reinterpret_cast<char*>(&effectCount), sizeof(effectCount));
-		inFile.read(reinterpret_cast<char*>(&missileCount), sizeof(missileCount));
-
-		fmt::print("Loading {} items, {} outfits, {} effects, {} missiles\n", itemCount, outfitCount, effectCount,
-				   missileCount);
-
-		// Read items starting from ID 100
-		// For items: minID = 100, maxID = itemCount
-		// So we load items with IDs 100 through itemCount (inclusive)
-		// That's (itemCount - 100 + 1) items
-		uint32_t itemsToLoad = (itemCount >= 100) ? (itemCount - 100 + 1) : 0;
-		fmt::print("Loading {} items (itemCount={}, IDs 100-{} inclusive)\n", itemsToLoad, itemCount, itemCount);
-
-		for (uint32_t id = 0; id < itemsToLoad; ++id) {
-			uint32_t actualItemId = id + 100; // Actual item ID in file
-			auto itemType = std::make_shared<ItemType>();
-
-			// Check if file read is still valid
-			if (!inFile.good()) {
-				Warninger::sendErrorMsg(FUNC_NAME,
-										"File read error before item " + std::to_string(id + 100) + ". Stopping load.");
-				break;
-			}
-
-			// Read flags until we encounter 0xFF (ItemFlag.LastFlag)
-			// always read flags and texture patterns for every item ID, even if item doesn't exist
-			uint8_t flag;
-			bool firstFlag = true;
-			while (true) {
-				inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-				if (!inFile.good() || inFile.eof()) {
-					Warninger::sendErrorMsg(FUNC_NAME,
-											"File read error while reading flags at item " + std::to_string(id + 100));
-					break;
-				}
-
-				if (flag == 0xFF) {
-					// LastFlag - if this is the first flag, item doesn't exist, but we still read texture patterns
-					break;
-				}
-
-				firstFlag = false;
-
-				switch (flag) {
-				case 0x00: // Ground
-					itemType->setFlag(IS_GROUND, true);
-					inFile.read(reinterpret_cast<char*>(&itemType->speed), sizeof(itemType->speed));
-					break;
-				case 0x01: // GroundBorder
-					itemType->itemCategory = GROUND_BORDER;
-					break;
-				case 0x02: // OnBottom
-					itemType->itemCategory = BOTTOM;
-					break;
-				case 0x03: // OnTop
-					itemType->itemCategory = TOP;
-					break;
-				case 0x04: // Container
-					itemType->setFlag(IS_CONTAINER, true);
-					break;
-				case 0x05: // Stackable
-					itemType->setFlag(STACKABLE, true);
-					break;
-				case 0x06: // ForceUse
-					itemType->setFlag(FORCE_USE, true);
-					break;
-				case 0x07: // MultiUse
-					itemType->setFlag(MULTI_USE, true);
-					break;
-				case 0x08: { // Writable
-					// itemType->readable = true;
-					uint16_t maxReadWriteChars = 0;
-					inFile.read(reinterpret_cast<char*>(&maxReadWriteChars), sizeof(maxReadWriteChars));
-					break;
-				}
-				case 0x09: { // WritableOnce
-					// itemType->readable = true;
-					uint16_t maxReadChars = 0;
-					inFile.read(reinterpret_cast<char*>(&maxReadChars), sizeof(maxReadChars));
-					break;
-				}
-				case 0x0A: // FluidContainer
-					// itemType->type = ITEM_TYPE_FLUID;
-					break;
-				case 0x0B: // Fluid
-					// itemType->type = ITEM_TYPE_SPLASH;
-					break;
-				case 0x0C: // Unpassable
-					itemType->setFlag(UNPASSABLE, true);
-					break;
-				case 0x0D: // Unmoveable
-					itemType->setFlag(UNMOVABLE, true);
-					break;
-				case 0x0E: // BlockMissiles
-					itemType->setFlag(BLOCK_MISSILE, true);
-					break;
-				case 0x0F: // BlockPathfinder
-					// Not implemented in current flag system
-					break;
-					//                    case 0x10: // NoMoveAnimation
-					//                        // Not implemented
-					//                        break;
-				case 0x10: // Pickupable
-					itemType->setFlag(PICKUPABLE, true);
-					break;
-				case 0x11: // Hangable
-					// itemType->hangable = true;
-					break;
-				case 0x12: // Horizontal
-					// itemType->hookEast = true;
-					break;
-				case 0x13: // Vertical
-					// itemType->hookSouth = true;
-					break;
-				case 0x14: // Rotatable
-					// itemType->rotatable = true;
-					break;
-				case 0x15: { // LightControl
-					LightBlock lightBlock;
-					inFile.read(reinterpret_cast<char*>(&lightBlock.lightIntensity), sizeof(lightBlock.lightIntensity));
-					inFile.read(reinterpret_cast<char*>(&lightBlock.lightColor), sizeof(lightBlock.lightColor));
-					itemType->lightBlock = lightBlock;
-					break;
-				}
-				case 0x16: // DontHide
-					break;
-				case 0x17: // Translucent
-					break;
-				case 0x18:								 // HasOffset
-					inFile.seekg(4, std::ios_base::cur); // Skip offsetX and offsetY
-					break;
-				case 0x19: // HasElevation
-					// itemType->hasElevation = true;
-					inFile.seekg(2, std::ios_base::cur); // Skip height
-					break;
-				case 0x1A: // Lying
-					break;
-				case 0x1B: // AnimateAlways
-					break;
-				case 0x1C: { // Minimap
-					uint16_t minimapColor = 0;
-					inFile.read(reinterpret_cast<char*>(&minimapColor), sizeof(minimapColor));
-					itemType->minimapColor = minimapColor;
-					break;
-				}
-				case 0x1D: // LensHelp
-					uint16_t opt;
-					inFile.read(reinterpret_cast<char*>(&opt), sizeof(opt));
-					if (opt == 1112) {
-						// itemType->readable = true;
-					}
-					break;
-				case 0x1E: // FullGround
-					// itemType->fullGround = true;
-					break;
-				case 0x1F: // IgnoreLook
-					// itemType->ignoreLook = true;
-					break;
-				case 0x20:								 // Cloth
-					inFile.seekg(2, std::ios_base::cur); // Skip cloth value
-					break;
-				case 0x21: {							 // Market
-					inFile.seekg(2, std::ios_base::cur); // Skip category
-					uint16_t tradeAs, showAs, nameLength;
-
-					inFile.read(reinterpret_cast<char*>(&tradeAs), sizeof(tradeAs));
-					inFile.read(reinterpret_cast<char*>(&showAs), sizeof(showAs));
-					inFile.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-
-					// Validate nameLength before reading
-					if (nameLength > 0 && nameLength < 256) { // Reasonable upper limit
-						std::vector<char> buffer(nameLength);
-						inFile.read(buffer.data(), nameLength);
-						itemType->name.assign(buffer.data(), nameLength);
-					} else {
-						// Skip corrupted name
-						inFile.seekg(nameLength, std::ios_base::cur);
-						itemType->name.clear();
-					}
-
-					// Read remaining fields
-					uint16_t restrictVocation = 0;
-					uint16_t requiredLevel = 0;
-					inFile.read(reinterpret_cast<char*>(&restrictVocation), sizeof(restrictVocation));
-					inFile.read(reinterpret_cast<char*>(&requiredLevel), sizeof(requiredLevel));
-					break;
-				}
-				case 0x22:								 // DefaultAction
-					inFile.seekg(2, std::ios_base::cur); // Skip action
-					break;
-				case 0x23: // Wrappable
-				case 0x24: // Unwrappable
-				case 0x25: // TopEffect
-				case 0x26: // Usable
-					break;
-				case 0xFE: // 254
-					break;
-				default:
-					Warninger::sendErrorMsg(FUNC_NAME,
-											"Unknown flag 0x" + std::to_string(flag) + " at id " + std::to_string(id));
-					// delete itemType;
-					// inFile.close();
-					// return;
-					break;
-				}
-			}
-
-			// Read texture patterns data (always read, even if item doesn't exist)
-			// Always read texture patterns for every item ID, even if item doesn't exist
-			// Check if we can read the dimensions
-			if (!inFile.good() && !inFile.eof()) {
-				Warninger::sendErrorMsg(FUNC_NAME, "File read error before reading dimensions at item " +
-													   std::to_string(actualItemId) + ". Pushing empty item.");
-				// Still push empty item to maintain count
-				Items::pushItemType(itemType);
-				continue;
-			}
-
-			inFile.read(reinterpret_cast<char*>(&itemType->width), sizeof(itemType->width));
-			inFile.read(reinterpret_cast<char*>(&itemType->height), sizeof(itemType->height));
-
-			if (!inFile.good() && !inFile.eof()) {
-				Warninger::sendErrorMsg(FUNC_NAME, "File read error after reading dimensions at item " +
-													   std::to_string(actualItemId) + ". Pushing partial item.");
-				// Still push item to maintain count
-				Items::pushItemType(itemType);
-				continue;
-			}
-
-			// Validate dimensions - ensure they're at least 1
-			if (itemType->width == 0)
-				itemType->width = 1;
-			if (itemType->height == 0)
-				itemType->height = 1;
-
-			if (itemType->width > 1 || itemType->height > 1) {
-				inFile.seekg(1, std::ios_base::cur); // Skip exact size
-			}
-
-			inFile.read(reinterpret_cast<char*>(&itemType->layers), sizeof(itemType->layers));
-			inFile.read(reinterpret_cast<char*>(&itemType->patternX), sizeof(itemType->patternX));
-			inFile.read(reinterpret_cast<char*>(&itemType->patternY), sizeof(itemType->patternY));
-			inFile.read(reinterpret_cast<char*>(&itemType->patternZ), sizeof(itemType->patternZ));
-			inFile.read(reinterpret_cast<char*>(&itemType->animationsFrames), sizeof(itemType->animationsFrames));
-
-			// Validate pattern dimensions - ensure they're at least 1 (for 8.6 protocol, 0 means not used, but we need
-			// at least 1 for calculations) Note: Some items may legitimately have 0 in the file, but we need at least 1
-			// for our indexing calculations
-			if (itemType->layers == 0)
-				itemType->layers = 1;
-			if (itemType->patternX == 0)
-				itemType->patternX = 1;
-			if (itemType->patternY == 0)
-				itemType->patternY = 1;
-			if (itemType->patternZ == 0)
-				itemType->patternZ = 1;
-			if (itemType->animationsFrames == 0)
-				itemType->animationsFrames = 1;
-
-			// Debug: Log pattern dimensions for first few items to verify reading
-			if (actualItemId <= 105) {
-				fmt::print(
-					"Item {}: width={}, height={}, layers={}, patternX={}, patternY={}, patternZ={}, frames={}\n",
-					actualItemId, itemType->width, itemType->height, itemType->layers, itemType->patternX,
-					itemType->patternY, itemType->patternZ, itemType->animationsFrames);
-			}
-
-			bool isAnimation = itemType->animationsFrames > 1;
-
-			// Skip frame durations if needed
-			if (isAnimation && m_assetsInfo.frameDurations) {
-				inFile.seekg(6 + 8 * itemType->animationsFrames, std::ios_base::cur);
-			}
-
-			// Calculate number of sprites (must match getCalcIndexesCount formula)
-			uint32_t numSprites = itemType->width * itemType->height * itemType->layers * itemType->patternX *
-								  itemType->patternY * itemType->patternZ * itemType->animationsFrames;
-
-			// Resize vector to hold all sprites
-			itemType->textureIdsVector.resize(numSprites, 0);
-
-			// Read sprite IDs in the order they're stored in the file
-			// Order in file matches getSpriteIndex formula: frame -> patternZ -> patternY -> patternX -> layers ->
-			// height -> width
-			for (uint32_t i = 0; i < numSprites; ++i) {
-				uint32_t spriteId = 0;
-				if (m_assetsInfo.extended) {
-					// Read 32-bit little-endian
-					uint8_t bytes[4];
-					inFile.read(reinterpret_cast<char*>(bytes), 4);
-					if (inFile.gcount() != 4) {
-						Warninger::sendErrorMsg(FUNC_NAME, "Failed to read sprite ID at item " +
-															   std::to_string(actualItemId) + ", sprite " +
-															   std::to_string(i));
-						break; // Stop reading sprites for this item
-					}
-					spriteId = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
-				} else {
-					// Read 16-bit little-endian
-					uint8_t bytes[2];
-					inFile.read(reinterpret_cast<char*>(bytes), 2);
-					if (inFile.gcount() != 2) {
-						Warninger::sendErrorMsg(FUNC_NAME, "Failed to read sprite ID at item " +
-															   std::to_string(actualItemId) + ", sprite " +
-															   std::to_string(i));
-						break; // Stop reading sprites for this item
-					}
-					spriteId = bytes[0] | (bytes[1] << 8);
-				}
-
-				itemType->textureIdsVector[i] = spriteId;
-			}
-
-			// Check if we successfully read all sprites
-			if (inFile.fail() && !inFile.eof()) {
-				Warninger::sendErrorMsg(FUNC_NAME, "File read error at item " + std::to_string(actualItemId) +
-													   ". Pushing partial item.");
-				// Still push the item to maintain count
-			}
-
-			// Store the item (ALWAYS push, even if empty/incomplete, to maintain correct count)
-			Items::pushItemType(itemType);
+		// Update assets info with detected version
+		if (result.detectedVersion.has_value()) {
+			m_assetsInfo.detectedVersion = result.detectedVersion;
+			m_assetsInfo.applyVersionSettings();
+			fmt::print("Loaded dat with detected version: {} (protocol {})\n", result.detectedVersion->valueStr,
+					   static_cast<int>(result.detectedVersion->getProtocolVersion()));
 		}
 
-		// Load outfits (starting from ID 1)
-		// For outfits: minID = 1, maxID = outfitCount
-		// So we load outfits with IDs 1 through outfitCount (inclusive)
-		for (uint32_t id = 1; id <= outfitCount; ++id) {
-			auto outfitType = std::make_shared<OutfitType>();
-			outfitType->category = ThingCategory::OUTFIT;
+		fmt::print("Successfully loaded {} items, {} outfits, {} effects, {} missiles\n", result.header.itemsCount,
+				   result.header.outfitsCount, result.header.effectsCount, result.header.missilesCount);
 
-			// Read properties (for outfits/effects/missiles, this is usually just 0xFF if no properties)
-			// But we still need to read it to advance the file pointer
-			uint8_t flag;
-			while (true) {
-				inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-				if (!inFile.good() || inFile.eof()) {
-					Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading outfit properties at ID " +
-														   std::to_string(id));
-					break;
-				}
-				if (flag == 0xFF) { // LAST_FLAG
-					break;
-				}
-				// For now, we don't handle outfit-specific properties, just skip any data
-				// In the future, we might need to handle outfit properties here
-			}
-
-			// Read texture patterns
-			loadThingTypePatterns(inFile, outfitType);
-			Outfits::pushOutfitType(outfitType);
-		}
-
-		// Load effects (starting from ID 1)
-		for (uint32_t id = 1; id <= effectCount; ++id) {
-			auto effectType = std::make_shared<EffectType>();
-			effectType->category = ThingCategory::EFFECT;
-
-			// Read properties
-			uint8_t flag;
-			while (true) {
-				inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-				if (!inFile.good() || inFile.eof()) {
-					Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading effect properties at ID " +
-														   std::to_string(id));
-					break;
-				}
-				if (flag == 0xFF) { // LAST_FLAG
-					break;
-				}
-				// Handle effect-specific properties if needed
-				// For now, effects might have TOP_EFFECT flag (0x23 in MetadataFlags6)
-				if (flag == 0x23) { // TOP_EFFECT
-					// effectType->topEffect = true; // If we add this property later
-				}
-			}
-
-			// Read texture patterns
-			loadThingTypePatterns(inFile, effectType);
-			Effects::pushEffectType(effectType);
-		}
-
-		// Load missiles (starting from ID 1)
-		for (uint32_t id = 1; id <= missileCount; ++id) {
-			auto missileType = std::make_shared<MissileType>();
-			missileType->category = ThingCategory::MISSILE;
-
-			// Read properties
-			uint8_t flag;
-			while (true) {
-				inFile.read(reinterpret_cast<char*>(&flag), sizeof(flag));
-				if (!inFile.good() || inFile.eof()) {
-					Warninger::sendErrorMsg(FUNC_NAME, "File read error while reading missile properties at ID " +
-														   std::to_string(id));
-					break;
-				}
-				if (flag == 0xFF) { // LAST_FLAG
-					break;
-				}
-				// Missiles typically don't have properties, but we handle it just in case
-			}
-
-			// Read texture patterns
-			loadThingTypePatterns(inFile, missileType);
-			Missiles::pushMissileType(missileType);
-		}
-
-		inFile.close();
 		onDatLoaded(decidedPath);
 	} catch (const std::exception& e) {
 		Warninger::sendErrorMsg(FUNC_NAME, "Failed to read dat '" + decidedPath + "': " + e.what());
@@ -1326,22 +936,22 @@ void AssetsManager::createPreviewTexture(int id, ThingCategory category) {
 	case ThingCategory::ITEM:
 		isValid = Items::isValidItemTypeIndex(id);
 		if (isValid)
-			thingType = Items::getItemType(id);
+			thingType = std::static_pointer_cast<ThingType>(Items::getItemType(id));
 		break;
 	case ThingCategory::OUTFIT:
 		isValid = Outfits::isValidOutfitTypeIndex(id);
 		if (isValid)
-			thingType = Outfits::getOutfitType(id);
+			thingType = std::static_pointer_cast<ThingType>(Outfits::getOutfitType(id));
 		break;
 	case ThingCategory::EFFECT:
 		isValid = Effects::isValidEffectTypeIndex(id);
 		if (isValid)
-			thingType = Effects::getEffectType(id);
+			thingType = std::static_pointer_cast<ThingType>(Effects::getEffectType(id));
 		break;
 	case ThingCategory::MISSILE:
 		isValid = Missiles::isValidMissileTypeIndex(id);
 		if (isValid)
-			thingType = Missiles::getMissileType(id);
+			thingType = std::static_pointer_cast<ThingType>(Missiles::getMissileType(id));
 		break;
 	}
 
@@ -1901,6 +1511,66 @@ void AssetsManager::unload() {
 
 void AssetsManager::doPopupAssetFileOpen() {
 	auto sprFolderPath = SavedData::getInstance()->getDataString("sprFolderPath");
+
+	// Static cache to avoid reading files every frame
+	static std::string lastCheckedPath = "";
+	static uint32_t detectedDatSig = 0;
+	static uint32_t detectedSprSig = 0;
+	static std::optional<ClientVersion> detectedVersion;
+	static bool hasDetected = false;
+
+	// Perform detection if path changed
+	if (sprFolderPath != lastCheckedPath) {
+		lastCheckedPath = sprFolderPath;
+		hasDetected = false;
+		detectedVersion.reset();
+		detectedDatSig = 0;
+		detectedSprSig = 0;
+
+		bool foundDat = Tools::isPresentFileExtensionInAPath(sprFolderPath, ".dat");
+		bool foundSpr = Tools::isPresentFileExtensionInAPath(sprFolderPath, ".spr");
+
+		if (foundDat && foundSpr) {
+			auto datPath = Tools::findFile(sprFolderPath, ".dat");
+			auto sprPath = Tools::findFile(sprFolderPath, ".spr");
+
+			std::ifstream datFile(datPath, std::ios::binary);
+			std::ifstream sprFile(sprPath, std::ios::binary);
+
+			if (datFile.is_open() && sprFile.is_open()) {
+				datFile.read(reinterpret_cast<char*>(&detectedDatSig), 4);
+				sprFile.read(reinterpret_cast<char*>(&detectedSprSig), 4);
+
+				detectedVersion = VersionStorage::getInstance().getBySignatures(detectedDatSig, detectedSprSig);
+				hasDetected = true;
+
+				// Auto-apply settings if version detected
+				if (detectedVersion.has_value()) {
+					m_assetsInfo.extended = detectedVersion->isExtended();
+					m_assetsInfo.transparency =
+						detectedVersion->value >= 960; // Usually implied by extended? Let's assume standard behavior
+
+					// Actually transparency is typically 9.60+ in OB, extended is 9.60+ too.
+					// Let's rely on ClientVersion properties if available or derived.
+					// ClientVersion struct in Version.h has isExtended(). Transparency is usually tied to extended in
+					// standard tibia. But let's check exact logic. Usually extended=true implies transparency=true for
+					// Tibia.
+					if (detectedVersion->value >= 960)
+						m_assetsInfo.transparency = true;
+					else
+						m_assetsInfo.transparency = false;
+
+					m_assetsInfo.frameDurations = detectedVersion->hasImprovedAnimations();
+					m_assetsInfo.frameGroups = detectedVersion->hasFrameGroups();
+
+					// Update SavedData immediately so checkboxes reflect state
+					SavedData::getInstance()->setDataBool("sprExtended", m_assetsInfo.extended);
+					SavedData::getInstance()->setDataBool("sprTransparency", m_assetsInfo.transparency);
+				}
+			}
+		}
+	}
+
 	bool foundOTDat = Tools::isPresentFileExtensionInAPath(sprFolderPath, ".dat");
 	bool foundOTAssetsInFolder = foundOTDat && Tools::isPresentFileExtensionInAPath(sprFolderPath, ".spr");
 
@@ -1916,6 +1586,7 @@ void AssetsManager::doPopupAssetFileOpen() {
 	ImGui::PushItemWidth(200);
 	if (ImGui::InputText("##folderSpr", &sprFolderPath)) {
 		SavedData::getInstance()->setDataString("sprFolderPath", sprFolderPath);
+		// Input changed, cache will invalidate on next frame due to path diff
 	};
 	ImGui::SameLine();
 	if (ImGui::Button("Browse##SelectPathToSprLoad")) {
@@ -1928,6 +1599,23 @@ void AssetsManager::doPopupAssetFileOpen() {
 
 	ImGui::Spacing();
 	ImGui::Separator();
+
+	// Detected Version Info Label
+	if (hasDetected) {
+		if (detectedVersion.has_value()) {
+			ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Detected Version: %s (Protocol %d)",
+							   detectedVersion->valueStr.c_str(), (int)detectedVersion->getProtocolVersion());
+			m_assetsInfo.detectedVersion = detectedVersion; // Store for loading phase
+		} else {
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Unknown Version");
+			m_assetsInfo.detectedVersion.reset();
+		}
+		ImGui::TextDisabled("Signatures - DAT: %08X, SPR: %08X", detectedDatSig, detectedSprSig);
+	} else {
+		ImGui::TextDisabled("No signatures detected.");
+	}
+
+	ImGui::Spacing();
 	ImGui::Text("Options:");
 	if (ImGui::Checkbox("Extended##ExtendedSprites", &m_assetsInfo.extended)) {
 		SavedData::getInstance()->setDataBool("sprExtended", m_assetsInfo.extended);
@@ -1951,6 +1639,12 @@ void AssetsManager::doPopupAssetFileOpen() {
 	if (ImGui::Button("Load Spr")) {
 		if (Tools::isValidFolderPath(sprFolderPath) && foundOTAssetsInFolder) {
 			auto foundFile = Tools::findFile(sprFolderPath, ".spr");
+
+			// Ensure assetsInfo has the detected info
+			if (detectedVersion.has_value()) {
+				m_assetsInfo.detectedVersion = detectedVersion;
+			}
+
 			buttonLoadGraphics(foundFile);
 			ImGui::CloseCurrentPopup();
 		}

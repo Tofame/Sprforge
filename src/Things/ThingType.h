@@ -32,7 +32,7 @@ public:
 
 	// Properties that all child classes have
 	LightBlock lightBlock;
-	bool hasLight() { return lightBlock.lightIntensity > 0 || lightBlock.lightColor > 0; };
+	[[nodiscard]] bool hasLight() const { return lightBlock.lightIntensity > 0 || lightBlock.lightColor > 0; };
 
 	// Common methods
 	void setWidth(int width);

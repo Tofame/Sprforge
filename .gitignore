@@ -416,3 +416,4 @@ Sprforge.vcxproj
 Sprforge.vcxproj.filters
 premake5.exe
 /enc_temp_folder
+/src-ob

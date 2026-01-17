@@ -4,6 +4,7 @@
 #include "../Helper/GUIHelper.h"
 #include "../Helper/SavedData.h"
 #include "../Misc/Warninger.h"
+#include "../Protocol/Version.h"
 #include "../Things/ItemType.h"
 #include "../Things/Items.h"
 #include "../Things/ThingType.h"
@@ -12,6 +13,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -32,10 +34,48 @@ struct AssetsInfo {
 	bool frameDurations = false; // also called 'improvedAnimations' I think?
 	bool frameGroups = false;
 
+	// Auto-detection settings
+	bool autoDetectOptions = true; // If true, detect extended/frameDurations/frameGroups from version/signature
+
+	// Detected/selected version information
+	std::optional<ClientVersion> detectedVersion;
+	uint32_t clientVersion = 860; // Default to 8.60 for backward compatibility
+
 	// Compiling stuff
 	char name[128] = "Tibia"; // assets name without extension
 	int compileTypeIndex = 1;
 	std::string outputPath;
+
+	// Auto-apply detected settings based on version
+	void applyVersionSettings() {
+		if (detectedVersion.has_value()) {
+			clientVersion = detectedVersion->value;
+			if (autoDetectOptions) {
+				extended = detectedVersion->isExtended();
+				frameDurations = detectedVersion->hasImprovedAnimations();
+				frameGroups = detectedVersion->hasFrameGroups();
+			}
+		}
+	}
+
+	// Get protocol version for the current settings
+	[[nodiscard]] ProtocolVersion getProtocolVersion() const {
+		if (detectedVersion.has_value()) {
+			return detectedVersion->getProtocolVersion();
+		}
+		// Determine from clientVersion
+		if (clientVersion <= 730)
+			return ProtocolVersion::PROTOCOL_710_730;
+		if (clientVersion <= 750)
+			return ProtocolVersion::PROTOCOL_740_750;
+		if (clientVersion <= 772)
+			return ProtocolVersion::PROTOCOL_755_772;
+		if (clientVersion <= 854)
+			return ProtocolVersion::PROTOCOL_780_854;
+		if (clientVersion <= 986)
+			return ProtocolVersion::PROTOCOL_860_986;
+		return ProtocolVersion::PROTOCOL_1010_PLUS;
+	}
 };
 
 class AssetsManager {
